@@ -55,7 +55,7 @@ export async function AuthMiddleware(req: AuthRequest, res: express.Response<Err
 			})
 		}
 		
-		const user = await User.findOne({id: userInfoFromJWT.id})
+		const user = await User.findOne({_id: userInfoFromJWT.id})
 		
 		if (!user) {
 			return res.status(404).json({
