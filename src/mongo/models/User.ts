@@ -1,4 +1,4 @@
-import {Schema, model, Document} from "mongoose";
+import {model, Schema} from "mongoose";
 
 export interface UserModel {
 	_id: Schema.Types.ObjectId,

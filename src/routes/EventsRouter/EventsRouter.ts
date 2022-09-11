@@ -1,27 +1,17 @@
 import express from "express";
-import {Event, EventHistoryItem, EventModel} from "../../mongo/models/Event";
-import {User, UserModel} from "../../mongo/models/User";
+import {CalendarPriorityKeys, Event, EventLinkItem, EventModel, TaskStatusesType} from "../../mongo/models/EventModel";
+import {UserModel} from "../../mongo/models/User";
 import {AuthMiddleware} from "../../middlewares/auth.middleware";
 import dayjs from "dayjs";
-import * as Events from "events";
 import {Schema} from "mongoose";
+import {changeTaskData, getEventHistoryObject, UpdateTaskInfo, utcDate, utcString} from "../../common/common";
+import {UpdateTaskTypes} from "./types";
+import {TaskStatusesObject} from "../../common/constants";
+import {Calendars, CalendarsModel} from "../../mongo/models/Calendars";
+import {FullResponseEventModel, ShortEventItemResponse} from "../../common/transform/events/types";
+import {EventTransformer} from "../../common/transform/events/events";
 
 const route = express.Router()
-
-export type CalendarPriorityKeys =
-	'veryLow'
-	| 'low'
-	| 'medium'
-	| 'high'
-	| 'veryHigh'
-	| 'not_selected'
-
-export type TaskStatusesType = 'completed' | 'created' | 'in_progress' | 'review'
-
-export interface EventLinkItem {
-	key: string,
-	value: string
-}
 
 
 interface RequestTaskBody {
@@ -31,53 +21,23 @@ interface RequestTaskBody {
 	priority: CalendarPriorityKeys,
 	time: string,
 	timeEnd: string,
-	link: EventLinkItem | null
+	link: EventLinkItem | null,
+	description?: string,
+	calendar: Schema.Types.ObjectId
 }
 
 export interface AuthRequest<Data extends any = any, Params = any> extends express.Request<Params, any, Data> {
 	user?: UserModel
 }
 
+export type FilterTaskStatuses = 'in_work' | 'completed' | 'archive'
+
 interface GetTaskAtDayInputValues {
 	fromDate: string,
 	toDate: string,
 	title: string | null,
-	priority: CalendarPriorityKeys | null
-}
-
-interface EventItem extends Omit<EventModel, 'createdAt' | 'time' | 'timeEnd' | 'lastChange' | '_id'> {
-	id: Schema.Types.ObjectId | string,
-	createdAt: string,
-	time: string,
-	timeEnd: string,
-	lastChange: string,
-}
-
-interface DetailUserModel extends Omit<UserModel, '_id' | "created" | 'password'> {
-	id: string | Schema.Types.ObjectId,
-	created: string
-}
-
-interface DetailHistoryItemFromDb extends Omit<EventHistoryItem, 'userId'> {
-	userId: UserModel
-}
-
-interface DetailHistoryItem extends Omit<DetailHistoryItemFromDb, 'date' | 'userId'> {
-	date: string,
-	userId: DetailUserModel
-}
-
-interface DetailEventModel extends Omit<EventModel, 'history'> {
-	history: Array<DetailHistoryItemFromDb>
-}
-
-interface DetailEventItem extends Omit<EventItem, 'history'> {
-	history: Array<DetailHistoryItem>
-}
-
-interface GetTaskAtDayResult {
-	events: Array<EventItem>,
-	errorMessage?: string
+	priority: CalendarPriorityKeys | null,
+	taskStatus: FilterTaskStatuses
 }
 
 interface GetTaskSchemeInputProps {
@@ -99,10 +59,9 @@ type GetTaskSchemeResult = {
 	[key: string]: boolean | undefined
 }
 
-export type ShortEventItem = Pick<EventItem, 'title' | 'time' | 'timeEnd' | 'link' | 'id' | 'priority' | 'description' | 'status'>
 
 export const handlers = {
-	addEvent: async (req: AuthRequest<RequestTaskBody>, res: express.Response) => {
+	async addEvent(req: AuthRequest<RequestTaskBody>, res: express.Response) {
 		try {
 			const {user} = req
 			
@@ -119,7 +78,9 @@ export const handlers = {
 				time,
 				timeEnd,
 				type,
-				link
+				link,
+				description,
+				calendar
 			} = req.body
 			
 			const startTime = dayjs(time)
@@ -138,35 +99,45 @@ export const handlers = {
 				})
 			}
 			
-			const createdAt = dayjs().utc().toDate()
+			let resultCalendar: Schema.Types.ObjectId = calendar
 			
-			const result: EventModel = {
+			if (!resultCalendar) {
+				const MainCalendar = await Calendars.findOne({
+					type: 'Main',
+					userId: user._id
+				})
+				
+				if (!MainCalendar) {
+					return res.status(404).json({
+						data: null,
+						info: {
+							message: 'Не удалось найти календарь',
+							type: 'error'
+						}
+					})
+				}
+				
+				resultCalendar = MainCalendar._id
+			}
+			
+			await Event.create({
+				calendar: resultCalendar,
 				title,
 				status,
 				priority,
-				createdAt,
-				time: startTime.utc().toDate(),
-				timeEnd: endTime.utc().toDate(),
+				createdAt: utcDate(),
+				time: utcDate(startTime),
+				timeEnd: utcDate(endTime),
 				type,
 				link,
 				userId: user._id,
-				description: '',
+				description: description || '',
 				members: [],
-				lastChange: dayjs().utc().toDate(),
+				lastChange: utcDate(),
 				history: [
-					{
-						date: dayjs().utc().toDate(),
-						field: 'createdAt',
-						description: `Событие было создано пользователем: ${user.phone}`,
-						userId: user._id,
-						oldValue: null,
-						newValue: createdAt
-					}
+					getEventHistoryObject(null, {id: '', data: utcString(), field: 'createdAt'}, user)
 				]
-			}
-			
-			
-			await Event.create(result)
+			})
 			
 			return res.status(200).json({
 				message: 'Событие было успешно создано',
@@ -177,7 +148,7 @@ export const handlers = {
 			})
 		}
 	},
-	async getTaskAtDay(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItem>>) {
+	async getTaskAtDay(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItemResponse>>) {
 		try {
 			const {user} = req
 			
@@ -187,7 +158,7 @@ export const handlers = {
 					.json([])
 			}
 			
-			const {fromDate, toDate, title, priority} = req.body
+			const {fromDate, toDate, title, priority, taskStatus} = req.body
 			
 			const startDate = dayjs(fromDate)
 			
@@ -205,6 +176,11 @@ export const handlers = {
 					.json([])
 			}
 			
+			const calendars: Array<CalendarsModel> = await Calendars.find({
+				userId: user._id,
+				isSelected: true,
+			})
+			
 			const dateFilter = {
 				$gte: startDate.utc().toDate(),
 				$lte: endDate.utc().toDate()
@@ -212,8 +188,13 @@ export const handlers = {
 			
 			const filter: { [key: string]: any } = {
 				time: dateFilter,
-				timeEnd: dateFilter,
 				userId: user._id,
+				status: {
+					$in: TaskStatusesObject[taskStatus || 'in_work']
+				},
+				calendar: {
+					$in: calendars.map((item) => item._id)
+				}
 			}
 			
 			if (title) {
@@ -229,36 +210,20 @@ export const handlers = {
 			}
 			
 			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
-				sort: '1',
-				populate: {
-					path: 'history',
-					populate: 'userId',
-					transform: (doc: UserModel) => {
-						return {
-							...doc,
-							password: undefined
-						}
-					}
-				}
+				sort: {time: 1},
+				populate: [
+					{
+						path: 'history',
+						populate: 'userId',
+					},
+					{path: 'calendar'}
+				],
 			})
 			
 			if (eventsFromDB) {
 				return res
 					.status(200)
-					.json(
-						eventsFromDB.map((event) => {
-							return {
-								id: event._id || '',
-								title: event.title || '',
-								status: event.status,
-								description: event.description || '',
-								link: event.link || null,
-								priority: event.priority,
-								time: dayjs(event.time).utc().toString(),
-								timeEnd: dayjs(event.timeEnd).utc().toString(),
-							}
-						})
-					)
+					.json(eventsFromDB.map(EventTransformer.shortEventItemResponse))
 			}
 			
 			return res
@@ -388,16 +353,16 @@ export const handlers = {
 				})
 			
 		} catch (e) {
-		
+			
 		}
 	},
-	async getTaskInfo(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<DetailEventItem>>) {
+	async getTaskInfo(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<FullResponseEventModel>>) {
 		try {
 			const {user, params} = req
 			
 			if (!user) {
 				return res
-					.status(200)
+					.status(403)
 					.json({
 						data: null,
 						info: {
@@ -406,6 +371,8 @@ export const handlers = {
 						}
 					})
 			}
+			
+			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
@@ -419,13 +386,8 @@ export const handlers = {
 					})
 			}
 			
-			const taskInfo: DetailEventModel | null = await Event.findOne({
-				id: params.taskId
-			}, {}, {
-				populate: {
-					path: 'history',
-					populate: 'userId'
-				}
+			const taskInfo: EventModel | null = await Event.findOne({
+				_id: params.taskId
 			})
 			
 			if (!taskInfo) {
@@ -443,37 +405,9 @@ export const handlers = {
 			return res
 				.status(200)
 				.json({
-					data: {
-						id: taskInfo._id || '',
-						title: taskInfo.title,
-						time: dayjs(taskInfo.time).utc().toString(),
-						timeEnd: dayjs(taskInfo.timeEnd).utc().toString(),
-						createdAt: dayjs(taskInfo.createdAt).utc().toString(),
-						lastChange: dayjs(taskInfo.lastChange).utc().toString(),
-						description: taskInfo.description,
-						status: taskInfo.status,
-						history: taskInfo.history.map((item: DetailHistoryItemFromDb) => {
-							return {
-								date: dayjs(item.date).utc().toString(),
-								description: item.description,
-								newValue: item.newValue,
-								oldValue: item.oldValue,
-								field: item.field,
-								userId: {
-									phone: item.userId.phone,
-									name: item.userId.name,
-									id: item.userId._id,
-									created: dayjs(item.userId.created).utc().toString(),
-								}
-							}
-						}),
-						link: taskInfo.link,
-						members: taskInfo.members,
-						priority: taskInfo.priority,
-						type: taskInfo.type,
-						userId: taskInfo.userId
-					},
+					data: EventTransformer.eventItemResponse(taskInfo)
 				})
+			
 		} catch (e) {
 			return res
 				.status(500)
@@ -485,7 +419,174 @@ export const handlers = {
 					}
 				})
 		}
+	},
+	async updateTaskInfo(req: AuthRequest<UpdateTaskTypes>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			
+			const {user, body} = req
+			
+			
+			if (!user) {
+				return res
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Пользователь не найден',
+							type: 'error'
+						}
+					})
+			}
+			
+			const hasData = !!body.data
+			
+			if (!hasData) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Данные для обновления не были получены',
+						type: 'error'
+					}
+				})
+			}
+			
+			const task: EventModel | null = await Event.findOne({
+				_id: body.id
+			})
+			
+			if (!task) {
+				return res.status(404).json({
+					data: null,
+					info: {
+						message: 'Неверный идентификатор события',
+						type: 'error'
+					}
+				})
+			}
+			
+			const newTaskInfo = UpdateTaskInfo(task, body, user)
+			
+			if (typeof newTaskInfo === 'string') {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: newTaskInfo,
+						type: 'error'
+					}
+				})
+			}
+			
+			const updated = await Event.updateOne({_id: task._id}, newTaskInfo)
+			
+			console.log('Союытие обнолено', updated)
+			
+			return res.status(200).json({
+				data: null,
+				info: {
+					message: 'Успешно обновлено',
+					type: 'success'
+				}
+			})
+		} catch (e) {
+			return res.status(200).json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка сервера',
+					type: 'error'
+				}
+			})
+		}
+	},
+	async getCalendarsList(req: AuthRequest<{ exclude?: Array<CalendarsModel['type']> }>, res: express.Response<CustomResponseBody<Array<CalendarsModel>>>) {
+		try {
+			
+			
+			const {user, body} = req
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
+			}
+			
+			const {_id} = user
+			
+			const list: Array<CalendarsModel> | null = await Calendars.find({
+				userId: _id,
+				type: {
+					$nin: body.exclude || []
+				}
+			})
+			
+			if (!list) {
+				return res.status(404).json({
+					data: null,
+					info: {
+						message: 'Календари пользователя не найдены',
+						type: 'warning'
+					}
+				})
+			}
+			
+			return res.status(200).json({
+				data: list,
+			})
+		} catch (e) {
+			return res.status(500).json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка сервера',
+					type: 'error'
+				}
+			})
+		}
+	},
+	async changeCalendarSelect(req: AuthRequest<{ id: string, state: boolean }>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			
+			const {user, body: {id, state}} = req
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
+			}
+			
+			await Calendars.updateOne<CalendarsModel>({
+				_id: id,
+				userId: user._id
+			}, {
+				isSelected: state
+			})
+			
+			return res.status(200).json({
+				data: null,
+				info: {
+					message: 'Успешно обновлено',
+					type: 'success'
+				}
+			})
+			
+		} catch (e) {
+			return res.status(500).json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка сервера',
+					type: 'error'
+				}
+			})
+		}
+		
 	}
+	
 }
 
 route.use(AuthMiddleware)
@@ -493,7 +594,10 @@ route.post('/add', handlers.addEvent)
 route.post('/getTaskAtDay', handlers.getTaskAtDay)
 route.post('/remove', handlers.removeTask)
 route.post('/getTasksScheme', handlers.getTaskScheme)
+route.post('/taskInfo/update', handlers.updateTaskInfo)
 route.get('/taskInfo/:taskId', handlers.getTaskInfo)
+route.post('/calendars', handlers.getCalendarsList)
+route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
 
 
 export const EventsRouter = route

@@ -2,15 +2,16 @@ import cors from 'cors'
 import express from 'express'
 import cookieParser from "cookie-parser";
 import {RequestMiddleware} from "./middlewares/request.middleware";
-import {connect, mongo} from 'mongoose'
+import {connect} from 'mongoose'
 import {ApiRouter} from "./routes/ApiRouter/ApiRouter";
-import {User} from "./mongo/models/User";
-import {Event, EventModel} from "./mongo/models/Event";
 import dayjs from "dayjs";
 import utc from 'dayjs/plugin/utc'
-import * as Mongoose from "mongoose";
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
 
 dayjs.extend(utc)
+dayjs.extend(isSameOrBefore)
+dayjs.extend(isSameOrAfter)
 
 const app = express()
 const port = 9090

@@ -4,11 +4,12 @@ import {User, UserModel} from "../../mongo/models/User";
 import bcrypt from 'bcrypt'
 import {validateTools} from "../../tools/validate";
 import dayjs from "dayjs";
-import JWT, {JwtPayload} from 'jsonwebtoken'
-import {Schema, Types} from "mongoose";
+import JWT from 'jsonwebtoken'
+import {Schema} from "mongoose";
 import {Config} from "../../config/config";
 import {Session} from "../../mongo/models/Session";
 import {CustomResponseBody} from "../EventsRouter/EventsRouter";
+import {createBaseCalendars} from "../../common/common";
 
 const route = express.Router()
 
@@ -101,7 +102,7 @@ const handlers = {
 			
 			const hashPassword = await bcrypt.hash(password, 8,)
 			
-			await User.create({
+			const user: UserModel = await User.create({
 				phone,
 				password: hashPassword,
 				created: dayjs().utc().toDate(),
@@ -110,6 +111,7 @@ const handlers = {
 				lastUpdate: dayjs().utc().toDate()
 			})
 			
+			await createBaseCalendars(user)
 			
 			return res.status(200).json({
 				data: null,
@@ -216,6 +218,7 @@ const handlers = {
 		}
 		
 		const isVerifiedJWT = JWT.verify(accessToken, Config.secretAccessKey)
+		
 		if (!isVerifiedJWT) {
 			return res.status(401).json({
 				data: null,
@@ -239,7 +242,7 @@ const handlers = {
 		}
 		
 		const user = await User.findOne({
-			id: userInfo.id
+			_id: userInfo.id
 		})
 		
 		if (!user) {
@@ -273,6 +276,7 @@ const handlers = {
 			data: {
 				name: user.name,
 				_id: user._id,
+				surname: user.surname,
 				patronymic: user.patronymic,
 				phone: user.phone,
 				created: user.created,
