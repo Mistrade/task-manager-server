@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import {Schema} from "mongoose";
 import {changeTaskData, getEventHistoryObject, UpdateTaskInfo, utcDate, utcString} from "../../common/common";
 import {UpdateTaskTypes} from "./types";
-import {TaskStatusesObject} from "../../common/constants";
+import {colorRegExpDefault, colorRegExpRGBA, TaskStatusesObject} from "../../common/constants";
 import {Calendars, CalendarsModel} from "../../mongo/models/Calendars";
 import {FullResponseEventModel, ShortEventItemResponse} from "../../common/transform/events/types";
 import {EventTransformer} from "../../common/transform/events/events";
@@ -585,8 +585,97 @@ export const handlers = {
 			})
 		}
 		
+	},
+	async createCalendar(req: AuthRequest<{ title: string, color: string }>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			const {user, body} = req
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
+			}
+			
+			const {title, color} = body
+			
+			if (!title || !color) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Отсутствуют входные параметры',
+						type: 'error'
+					}
+				})
+			}
+			
+			const resultTitle = title.trim()
+			const isValidTitle = resultTitle.length >= 5 && resultTitle.length <= 20
+			
+			if (!isValidTitle) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Заголовок должен быть от 5 до 20 символов',
+						type: 'warning'
+					}
+				})
+			}
+			
+			const resultColor = color.trim().toLowerCase()
+			const isValidColor = colorRegExpRGBA.test(resultColor) || colorRegExpDefault.test(resultColor)
+			
+			if (!isValidColor) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Цвет должен быть в формате HEX или RGB/RGBA',
+						type: 'warning'
+					}
+				})
+			}
+			
+			const calendar = await Calendars.create({
+				title: resultTitle,
+				color: resultColor,
+				editable: true,
+				deletable: true,
+				isSelected: true,
+				type: 'Custom',
+				userId: user._id,
+			})
+			
+			if (!calendar) {
+				return res.status(500).json({
+					data: null,
+					info: {
+						message: 'Извините, нам не удалось создать календарь, попробуйте еще раз',
+						type: 'error'
+					}
+				})
+			}
+			
+			return res.status(200).json({
+				data: null,
+				info: {
+					message: 'Календарь успешщно создан',
+					type: 'success'
+				}
+			})
+			
+		} catch (e) {
+			return res.status(500).json({
+				data: null,
+				info: {
+					message: 'Календарь не был создан, так как произошла непредвиденная ошибка на сервере',
+					type: 'error'
+				}
+			})
+		}
 	}
-	
 }
 
 route.use(AuthMiddleware)
@@ -598,6 +687,7 @@ route.post('/taskInfo/update', handlers.updateTaskInfo)
 route.get('/taskInfo/:taskId', handlers.getTaskInfo)
 route.post('/calendars', handlers.getCalendarsList)
 route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
+route.post('/calendars/create', handlers.createCalendar)
 
 
 export const EventsRouter = route

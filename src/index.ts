@@ -17,7 +17,7 @@ const app = express()
 const port = 9090
 app.use(express.json())
 app.use(RequestMiddleware)
-app.use(cors({origin: ['http://localhost:8080', 'http://localhost:8080/'], credentials: true}))
+app.use(cors({origin: ['http://localhost:8080', 'http://localhost:8080/', 'http://localhost:8081/', 'http://localhost:8081'], credentials: true}))
 app.use(cookieParser())
 app.use('/api', ApiRouter)
 
