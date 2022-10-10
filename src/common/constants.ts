@@ -5,7 +5,8 @@ type TaskStatusesObjectProps = {
 	[key in FilterTaskStatuses]: Array<TaskStatusesType>
 }
 export const TaskStatusesObject: TaskStatusesObjectProps = {
-	in_work: ['created', 'in_progress', 'review'],
+	created: ['created'],
+	in_work: ['in_progress', 'review'],
 	completed: ['completed'],
 	archive: []
 }

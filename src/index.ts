@@ -30,6 +30,7 @@ const start = async (times: number) => {
 			console.log(`server has been started without errors on port ${port}`)
 		})
 	} catch (e) {
+	
 	}
 }
 
