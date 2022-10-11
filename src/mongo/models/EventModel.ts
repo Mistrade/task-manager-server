@@ -11,7 +11,7 @@ export type CalendarPriorityKeys =
 	| 'veryHigh'
 	| 'not_selected'
 
-export type TaskStatusesType = 'completed' | 'created' | 'in_progress' | 'review'
+export type TaskStatusesType = 'completed' | 'created' | 'in_progress' | 'review' | 'archive'
 
 export interface EventLinkItem {
 	key: string,

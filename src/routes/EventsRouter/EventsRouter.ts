@@ -30,7 +30,8 @@ interface RequestTaskBody {
 	timeEnd: string,
 	link: EventLinkItem | null,
 	description?: string,
-	calendar: Schema.Types.ObjectId
+	calendar: Schema.Types.ObjectId,
+	linkedFrom?: Schema.Types.ObjectId,
 }
 
 export interface AuthRequest<Data extends any = any, Params = any> extends express.Request<Params, any, Data> {
@@ -136,13 +137,17 @@ export const getTaskFiltersOfScope = async (res: express.Response, user: UserMod
 
 
 export const handlers = {
-	async addEvent(req: AuthRequest<RequestTaskBody>, res: express.Response) {
+	async addEvent(req: AuthRequest<RequestTaskBody>, res: express.Response<CustomResponseBody<{ taskId: Schema.Types.ObjectId }>>) {
 		try {
 			const {user} = req
 			
 			if (!user) {
 				return res.status(404).json({
-					message: 'Произошла ошибка сохранения события.'
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Произошла ошибка сохранения события.'
+					}
 				})
 			}
 			
@@ -155,14 +160,19 @@ export const handlers = {
 				type,
 				link,
 				description,
-				calendar
+				calendar,
+				linkedFrom
 			} = req.body
 			
 			const startTime = dayjs(time)
 			
 			if (!startTime.isValid()) {
 				return res.status(400).json({
-					message: 'Невалидная дата начала события'
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Невалидная дата начала события'
+					}
 				})
 			}
 			
@@ -170,7 +180,11 @@ export const handlers = {
 			
 			if (!endTime.isValid()) {
 				return res.status(400).json({
-					message: 'Невалидная дата завершения события'
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Невалидная дата завершения события'
+					}
 				})
 			}
 			
@@ -195,7 +209,8 @@ export const handlers = {
 				resultCalendar = MainCalendar._id
 			}
 			
-			await Event.create({
+			const createdEvent = await Event.create({
+				linkedFrom,
 				calendar: resultCalendar,
 				title,
 				status,
@@ -215,11 +230,21 @@ export const handlers = {
 			})
 			
 			return res.status(200).json({
-				message: 'Событие было успешно создано',
+				data: {
+					taskId: createdEvent._id,
+				},
+				info: {
+					type: 'success',
+					message: 'Событие успешно создано'
+				},
 			})
 		} catch (e) {
 			return res.status(500).json({
-				message: 'Не удалось сохранить событие'
+				data: null,
+				info: {
+					type: 'error',
+					message: 'Не удалось сохранить событие'
+				}
 			})
 		}
 	},
@@ -381,6 +406,28 @@ export const handlers = {
 			}
 			
 			const {id: taskId} = body
+			
+			const event: EventModel | null = await Event.findOne({
+				_id: taskId
+			})
+			
+			if (!event) {
+				return res.status(404).json({
+					message: 'Событие не найдено'
+				})
+			}
+			
+			if (event.status !== 'archive') {
+				await Event.updateOne({
+					_id: taskId
+				}, {
+					status: 'archive'
+				})
+				
+				return res.status(200).json({
+					message: 'Событие перенесено в архив'
+				})
+			}
 			
 			await Event.deleteOne({
 				_id: taskId

@@ -8,7 +8,7 @@ export const TaskStatusesObject: TaskStatusesObjectProps = {
 	created: ['created'],
 	in_work: ['in_progress', 'review'],
 	completed: ['completed'],
-	archive: []
+	archive: ['archive']
 }
 
 export const colorRegExpDefault = /#[a-fA-F0-9]{3,6}$/gi
