@@ -1,8 +1,24 @@
+---
 version: '3.8'
 services:
-  mongo:
+  back:
+    build: ./
+    container_name: back-api
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    depends_on:
+      - db_mongo
+
+  front-react:
+    build: ../../front/task-manager
+    container_name: front-react
+    command: npm start
+    restart: unless-stopped
+
+  db_mongo:
     image: mongo:4.4.4
-    container_name: mongo-mis
+    container_name: mongo-mistrade
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin

@@ -29,7 +29,7 @@ const start = async (times: number) => {
 		// await connect('mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.5.4', {
 		// 	dbName: 'calendar'
 		// })
-		await connect('mongodb://admin:admin@localhost:27018/admin?authSource=admin', (err) => {
+		await connect('mongodb://admin:admin@db_mongo:27018/admin?authSource=admin', (err) => {
 			if (err) {
 				console.log('Connection error: ', err)
 				throw err
