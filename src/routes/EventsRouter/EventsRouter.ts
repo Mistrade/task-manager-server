@@ -1,5 +1,12 @@
 import express from "express";
-import {CalendarPriorityKeys, Event, EventLinkItem, EventModel, TaskStatusesType} from "../../mongo/models/EventModel";
+import {
+	CalendarPriorityKeys,
+	DbEventModel,
+	Event,
+	EventLinkItem,
+	EventModel,
+	TaskStatusesType
+} from "../../mongo/models/EventModel";
 import {UserModel} from "../../mongo/models/User";
 import {AuthMiddleware} from "../../middlewares/auth.middleware";
 import dayjs from "dayjs";
@@ -210,7 +217,7 @@ export const handlers = {
 			}
 			
 			const createdEvent = await Event.create({
-				linkedFrom,
+				linkedFrom: linkedFrom || undefined,
 				calendar: resultCalendar,
 				title,
 				status,
@@ -239,6 +246,7 @@ export const handlers = {
 				},
 			})
 		} catch (e) {
+			console.log(req.url, e)
 			return res.status(500).json({
 				data: null,
 				info: {
@@ -765,7 +773,7 @@ export const handlers = {
 		}
 		
 	},
-	async createCalendar(req: AuthRequest<{ title: string, color: string }>, res: express.Response<CustomResponseBody<null>>) {
+	async createCalendar(req: AuthRequest<{ title: string, color: string, id: string }>, res: express.Response<CustomResponseBody<null>>) {
 		try {
 			const {user, body} = req
 			
@@ -804,7 +812,7 @@ export const handlers = {
 				})
 			}
 			
-			const resultColor = color.trim().toLowerCase()
+			const resultColor = color.trim()
 			const isValidColor = colorRegExpRGBA.test(resultColor) || colorRegExpDefault.test(resultColor)
 			
 			if (!isValidColor) {
@@ -907,6 +915,173 @@ export const handlers = {
 		} catch (e) {
 			
 		}
+	},
+	async getCalendarInfo(req: AuthRequest<any, { calendarId: string }>, res: express.Response<CustomResponseBody<CalendarsModel>>) {
+		try {
+			
+			const {user} = req
+			
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						type: 'error',
+						message: 'У вас нет прав для совершения этого действия'
+					}
+				})
+			}
+			
+			const {calendarId} = req.params
+			
+			if (!calendarId) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Некорректный запрос'
+					}
+				})
+			}
+			
+			const calendarInfo: CalendarsModel | null = await Calendars.findOne({
+				userId: user._id,
+				_id: calendarId,
+				editable: true,
+			})
+			
+			if (!calendarInfo) {
+				return res.status(404).json({
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Запрашиваемый календарь не найден'
+					}
+				})
+			}
+			
+			return res.status(200).json({
+				data: calendarInfo,
+			})
+			
+		} catch (e) {
+			console.log(e)
+			return res.status(500).json({
+				data: null,
+				info: {
+					type: 'error',
+					message: 'Произошла непредвиденная ошибка на сервере'
+				}
+			})
+		}
+	},
+	updateCalendarInfo: async function (req: AuthRequest<{ title: string, color: string, id: string }>, res: express.Response) {
+		try {
+			const {user, body} = req
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
+			}
+			
+			const {title, color, id} = body
+			
+			if (!title || !color || !id) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Отсутствуют входные параметры',
+						type: 'error'
+					}
+				})
+			}
+			
+			const calendar: CalendarsModel | null = await Calendars.findOne({
+				_id: id,
+				userId: user._id,
+				editable: true,
+			})
+			
+			if (!calendar) {
+				return res
+					.status(404)
+					.json({
+						data: null,
+						info: {
+							type: 'error',
+							message: 'Не удалось изменить календарь, так как он не найден'
+						}
+					})
+			}
+			if (calendar.title === title && calendar.color === color) {
+				return res.status(200).json({
+					data: null,
+					info: {
+						type: 'info',
+						message: 'Изменений не выявлено'
+					}
+				})
+			}
+			
+			const resTitle = title.trim()
+			const isValidTitle = resTitle.length >= 5 && resTitle.length <= 20
+			
+			if (!isValidTitle) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Заголовок должен быть от 5 до 20 символов',
+						type: 'warning'
+					}
+				})
+			}
+			
+			const resultColor = color.trim()
+			const isValidColor = colorRegExpRGBA.test(resultColor) || colorRegExpDefault.test(resultColor)
+			
+			if (!isValidColor) {
+				return res.status(400).json({
+					data: null,
+					info: {
+						message: 'Цвет должен быть в формате HEX или RGB/RGBA',
+						type: 'warning'
+					}
+				})
+			}
+			
+			await Calendars.updateOne({
+				userId: user._id,
+				_id: id,
+				editable: true,
+			}, {
+				title,
+				color
+			})
+			
+			return res.status(200)
+				.json({
+					data: null,
+					info: {
+						type: 'success',
+						message: 'Успешно обновлено'
+					}
+				})
+			
+		} catch (e) {
+			console.log(e)
+			return res.status(500).json({
+				data: null,
+				info: {
+					type: 'error',
+					message: 'Произошла непредвиденная ошибка на сервере'
+				}
+			})
+		}
 	}
 }
 
@@ -923,6 +1098,8 @@ route.post('/calendars', handlers.getCalendarsList)
 route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
 route.post('/calendars/create', handlers.createCalendar)
 route.post('/calendars/remove', handlers.removeCalendar)
+route.get('/calendars/info/:calendarId', handlers.getCalendarInfo)
+route.post('/calendars/update', handlers.updateCalendarInfo)
 
 
 export const EventsRouter = route

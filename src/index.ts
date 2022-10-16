@@ -1,9 +1,9 @@
 import cors from 'cors'
 import express from 'express'
 import cookieParser from "cookie-parser";
-import { RequestMiddleware } from "./middlewares/request.middleware";
-import { connect } from 'mongoose'
-import { ApiRouter } from "./routes/ApiRouter/ApiRouter";
+import {RequestMiddleware} from "./middlewares/request.middleware";
+import {connect} from 'mongoose'
+import {ApiRouter} from "./routes/ApiRouter/ApiRouter";
 import dayjs from "dayjs";
 import utc from 'dayjs/plugin/utc'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
@@ -17,8 +17,10 @@ const app = express()
 const port = 9090
 app.use(express.json())
 app.use(RequestMiddleware)
-// app.use(cors({ origin: ['http://localhost:8080', 'http://localhost:8080/', 'http://localhost:8081/', 'http://localhost:8081'], credentials: true }))
-app.use(cors())
+app.use(cors({
+	origin: ['http://localhost:8080', 'http://localhost:8080/', 'http://localhost:8081/', 'http://localhost:8081'],
+	credentials: true
+}))
 app.use(cookieParser())
 app.use('/api', ApiRouter)
 
@@ -27,18 +29,16 @@ const start = async (times: number) => {
 		// await connect('mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.5.4', {
 		// 	dbName: 'calendar'
 		// })
-		await connect('mongodb://admin:admin@localhost:27017/admin?authSource=admin', (err) => {
+		await connect('mongodb://admin:admin@localhost:27018/admin?authSource=admin', (err) => {
 			if (err) {
 				console.log('Connection error: ', err)
 				throw err
 			}
 			console.log('Connected');
+			app.listen(port, async () => {
+				console.log(`server has been started without errors on port ${port}`)
+			})
 			// const db = client.db('calendar');
-		}
-		)
-
-		app.listen(port, async () => {
-			console.log(`server has been started without errors on port ${port}`)
 		})
 	} catch (e) {
 	

@@ -79,7 +79,7 @@ const EventSchema = new Schema({
 	createdAt: {type: Date, required: true},
 	description: {type: String},
 	link: {type: LinkSchema, required: false, default: null},
-	linkedFrom: {type: Schema.Types.ObjectId, ref: 'Event', default: null},
+	linkedFrom: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null},
 	members: {type: [{type: Schema.Types.ObjectId, ref: 'User', autopopulate: true}], default: []},
 	priority: {type: String, required: true},
 	status: {type: String, required: true},
