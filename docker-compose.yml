@@ -10,12 +10,6 @@ services:
     depends_on:
       - db_mongo
 
-  front-react:
-    build: ../../front/task-manager
-    container_name: front-react
-    command: npm start
-    restart: unless-stopped
-
   db_mongo:
     image: mongo:4.4.4
     container_name: mongo-mistrade
@@ -24,6 +18,6 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=admin
     ports:
-      - 27018:27017
+      - "27017:27017"
     volumes:
       - ./mongo-data-4.4:/data/db
