@@ -1,7 +1,7 @@
 import express from "express";
 import {RegistrationRequestBody} from "./types";
 import {User, UserModel} from "../../mongo/models/User";
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import {validateTools} from "../../tools/validate";
 import dayjs from "dayjs";
 import JWT from 'jsonwebtoken'
