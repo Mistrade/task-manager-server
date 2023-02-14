@@ -17,10 +17,8 @@ const app = express()
 const port = 9090
 app.use(express.json())
 app.use(RequestMiddleware)
-app.use(cors({
-	origin: ['http://localhost:8080', 'http://localhost:8080/', 'http://localhost:8081/', 'http://localhost:8081'],
-	credentials: true
-}))
+app.use(cors({ origin: ['http://80.249.145.220', 'http://80.249.145.220/*', 'http://80.249.145.220:8080', 'http://80.249.145.220:8080/*',
+'http://localhost:8080', 'http://localhost:8080/', 'http://localhost:8081/', 'http://localhost:8081'], credentials: true }))
 app.use(cookieParser())
 app.use('/api', ApiRouter)
 
@@ -38,8 +36,11 @@ const start = async (times: number) => {
 			app.listen(port, async () => {
 				console.log(`server has been started without errors on port ${port}`)
 			})
-			// const db = client.db('calendar');
-		})
+		}
+		
+		)
+
+		
 	} catch (e) {
 	
 	}

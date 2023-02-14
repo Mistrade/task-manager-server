@@ -4,6 +4,7 @@ services:
   back:
     build: ./
     container_name: back-api
+    command: npm run dev
     restart: unless-stopped
     ports:
       - "9090:9090"
