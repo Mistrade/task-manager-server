@@ -43,6 +43,12 @@ export interface UpdateTaskCalendar {
 	data: Schema.Types.ObjectId
 }
 
+export interface UpdateTaskIsLiked {
+	id: Schema.Types.ObjectId,
+	field: 'isLiked',
+	data: boolean
+}
+
 export type UpdateTaskTypes =
 	UpdateTaskPriority
 	| UpdateTaskStatus
@@ -51,6 +57,7 @@ export type UpdateTaskTypes =
 	| UpdateTaskTitleOrDescription
 	| UpdateTaskMembersList
 	| UpdateTaskCalendar
+	| UpdateTaskIsLiked
 
 
 export interface UpdateTaskCreatedAt {

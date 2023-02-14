@@ -12,6 +12,8 @@ export interface UserModel {
 	password: string
 }
 
+export type ShortUserModel = Pick<UserModel, 'name' | 'surname' | '_id'>
+
 const UserSchema = new Schema({
 	email: {type: String, required: false},
 	phone: {type: String, required: true, unique: true},

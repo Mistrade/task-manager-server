@@ -24,6 +24,7 @@ export interface DbEventModel {
 	description: string,
 	link: EventLinkItem | null,
 	linkedFrom?: Schema.Types.ObjectId,
+	parentId?: Schema.Types.ObjectId
 	members: Array<Schema.Types.ObjectId>,
 	priority: CalendarPriorityKeys,
 	status: TaskStatusesType,
@@ -34,14 +35,16 @@ export interface DbEventModel {
 	userId: Schema.Types.ObjectId,
 	lastChange: Date,
 	history: Array<DbEventHistoryItem>,
-	calendar: Schema.Types.ObjectId
+	calendar: Schema.Types.ObjectId,
+	isLiked: boolean,
+	childOf: Array<Schema.Types.ObjectId>
 }
 
-export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'history' | 'calendar'> {
+export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'history' | 'calendar' | 'childOf'> {
 	members: Array<UserModel>,
 	userId: UserModel,
 	history: Array<EventHistoryItem>,
-	calendar: CalendarsModel
+	calendar: CalendarsModel,
 }
 
 export type EventHistoryFields = Omit<EventModel, '_id' | 'linkedFrom' | 'userId' | 'lastChange' | 'history'>
@@ -79,7 +82,8 @@ const EventSchema = new Schema({
 	createdAt: {type: Date, required: true},
 	description: {type: String},
 	link: {type: LinkSchema, required: false, default: null},
-	linkedFrom: {type: Schema.Types.ObjectId, ref: 'Event', default: null},
+	linkedFrom: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null},
+	parentId: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null},
 	members: {type: [{type: Schema.Types.ObjectId, ref: 'User', autopopulate: true}], default: []},
 	priority: {type: String, required: true},
 	status: {type: String, required: true},
@@ -90,7 +94,13 @@ const EventSchema = new Schema({
 	userId: {type: Schema.Types.ObjectId, ref: 'User', required: true, autopopulate: true},
 	lastChange: {type: Date, required: true},
 	history: {type: [EventHistoryItemSchema], default: []},
-	calendar: {type: Schema.Types.ObjectId, ref: 'Calendar', required: true, autopopulate: true}
+	calendar: {type: Schema.Types.ObjectId, ref: 'Calendar', required: true, autopopulate: true},
+	isLiked: {type: Boolean, default: false, required: true},
+	childOf: {
+		type: [{
+			type: Schema.Types.ObjectId, ref: "Event"
+		}], required: false, default: []
+	}
 })
 
 EventSchema.plugin(autopopulate)

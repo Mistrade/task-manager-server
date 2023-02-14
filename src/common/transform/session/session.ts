@@ -1,9 +1,10 @@
-import {UserModel} from "../../../mongo/models/User";
+import {ShortUserModel, UserModel} from "../../../mongo/models/User";
 import {UserModelResponse} from "./types";
 import dayjs from "dayjs";
 
 export interface SessionTransformerObject {
 	userModelResponse: (data: UserModel) => UserModelResponse
+	shortUserModel: (data: UserModel) => ShortUserModel
 }
 
 export const SessionTransformer: SessionTransformerObject = {
@@ -17,6 +18,13 @@ export const SessionTransformer: SessionTransformerObject = {
 			email: data.email,
 			patronymic: data.patronymic,
 			lastUpdate: dayjs(data.lastUpdate).utc().toString(),
+		}
+	},
+	shortUserModel(data){
+		return {
+			_id: data._id,
+			name: data.name,
+			surname: data.surname
 		}
 	}
 }

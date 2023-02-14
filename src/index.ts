@@ -1,9 +1,9 @@
 import cors from 'cors'
 import express from 'express'
 import cookieParser from "cookie-parser";
-import { RequestMiddleware } from "./middlewares/request.middleware";
-import { connect } from 'mongoose'
-import { ApiRouter } from "./routes/ApiRouter/ApiRouter";
+import {RequestMiddleware} from "./middlewares/request.middleware";
+import {connect} from 'mongoose'
+import {ApiRouter} from "./routes/ApiRouter/ApiRouter";
 import dayjs from "dayjs";
 import utc from 'dayjs/plugin/utc'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
@@ -33,7 +33,6 @@ const start = async (times: number) => {
 				throw err
 			}
 			console.log('Connected');
-			// const db = client.db('calendar');
 			app.listen(port, async () => {
 				console.log(`server has been started without errors on port ${port}`)
 			})
