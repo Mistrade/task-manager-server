@@ -34,7 +34,7 @@ const start = async (times: number) => {
 			}
 			console.log('Connected');
 			app.listen(port, async () => {
-				console.log(`server has been started without errors on port ${port}`)
+				console.log(`server has been started without errors on port ${port} updated`)
 			})
 		}
 		

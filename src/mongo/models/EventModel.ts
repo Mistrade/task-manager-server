@@ -40,11 +40,15 @@ export interface DbEventModel {
 	childOf: Array<Schema.Types.ObjectId>
 }
 
-export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'history' | 'calendar' | 'childOf'> {
+export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'history' | 'calendar'> {
 	members: Array<UserModel>,
 	userId: UserModel,
 	history: Array<EventHistoryItem>,
 	calendar: CalendarsModel,
+}
+
+export interface EventModelWithPopulateChildOf extends Omit<EventModel, 'childOf'> {
+	childOf: Array<EventModel>
 }
 
 export type EventHistoryFields = Omit<EventModel, '_id' | 'linkedFrom' | 'userId' | 'lastChange' | 'history'>

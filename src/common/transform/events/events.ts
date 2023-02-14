@@ -41,6 +41,7 @@ export const EventTransformer: TransformerObject = {
 			lastChange: dayjs(event.lastChange).utc().toString(),
 			history: event.history.map(EventTransformer.historyItemResponse),
 			isLiked: event.isLiked,
+			childOf: event.childOf || []
 		}
 	},
 	calendarItemResponse(data) {

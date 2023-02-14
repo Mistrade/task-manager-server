@@ -4,7 +4,7 @@ import {
 	DbEventModel,
 	Event,
 	EventLinkItem,
-	EventModel,
+	EventModel, EventModelWithPopulateChildOf,
 	TaskStatusesType
 } from "../../mongo/models/EventModel";
 import {UserModel} from "../../mongo/models/User";
@@ -632,6 +632,70 @@ export const handlers = {
 				})
 		}
 	},
+	async getChildOfList(req: AuthRequest<string, {taskId: string}>, res: express.Response<CustomResponseBody<Array<FullResponseEventModel>>>){
+		try {
+			const {user, params} = req
+			
+			if (!user) {
+				return res
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
+			}
+			
+			console.log(user, params)
+			
+			if (!params.taskId) {
+				return res
+				.status(400)
+				.json({
+					data: null,
+					info: {
+						message: 'На вход ожидался ID события',
+						type: 'error'
+					}
+				})
+			}
+			
+			const taskInfo: EventModelWithPopulateChildOf | null = await Event.findOne({
+				_id: params.taskId
+			}).populate('childOf')
+			
+			if (!taskInfo) {
+				return res
+				.status(404)
+				.json({
+					data: null,
+					info: {
+						message: 'Событие не найдено',
+						type: 'warning'
+					}
+				})
+			}
+			
+			return res
+			.status(200)
+			.json({
+				data: taskInfo.childOf.map(EventTransformer.eventItemResponse)
+			})
+			
+		} catch (e) {
+			return res
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка',
+					type: 'error'
+				}
+			})
+		}
+	},
 	async updateTaskInfo(req: AuthRequest<UpdateTaskTypes>, res: express.Response<CustomResponseBody<null>>) {
 		try {
 			
@@ -1119,6 +1183,7 @@ route.post('/remove', handlers.removeTask)
 route.post('/getTasksScheme', handlers.getTaskScheme)
 route.post('/taskInfo/update', handlers.updateTaskInfo)
 route.get('/taskInfo/:taskId', handlers.getTaskInfo)
+route.get('/getChildOfList/:taskId', handlers.getChildOfList)
 route.post('/calendars', handlers.getCalendarsList)
 route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
 route.post('/calendars/create', handlers.createCalendar)

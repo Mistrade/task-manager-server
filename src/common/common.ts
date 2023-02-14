@@ -28,6 +28,7 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	userId: 'Изменен владелец события',
 	members: 'Добавлен(-ы) участник(-и) события', //+
 	isLiked: 'Добавлено/Удалено в(из) избранно(е|го)',
+	childOf: "123"
 }
 
 
