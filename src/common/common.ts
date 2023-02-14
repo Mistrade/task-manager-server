@@ -1,5 +1,5 @@
 import {DbEventModel, EventHistoryItem, EventModel} from "../mongo/models/EventModel";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import {SystemUpdateTaskTypes, UpdateTaskTypes} from "../routes/EventsRouter/types";
 import {UserModel} from "../mongo/models/User";
 import {Calendars, CalendarsModel} from "../mongo/models/Calendars";
@@ -287,15 +287,26 @@ export interface TaskSetResult {
 	storage: TaskStorage
 }
 
-export const setTaskAtDay = (storage: TaskStorage, day: Date, event: ShortEventItemResponse): TaskStorage => {
+export const setTaskAtDay = (storage: TaskStorage, storageDate: Date, event: ShortEventItemResponse, utcOffset: number): TaskStorage => {
 	console.log('set task at day is atrted')
 	let newStorage = {
 		...storage
 	}
 	
-	const y: number = day.getFullYear()
-	const m: number = day.getMonth()
-	const d: number = day.getDate()
+	const addUtcOffset = (date: Date): Dayjs => {
+		if (!utcOffset || utcOffset === 0) {
+			return dayjs(date)
+		}
+		
+		return dayjs(date).utcOffset(utcOffset, false)
+	}
+	
+	const day = addUtcOffset(storageDate)
+	
+	const y: number = day.year()
+	
+	const m: number = day.month()
+	const d: number = day.date()
 	
 	const currentYear: TaskYear = newStorage[y] || {}
 	const currentMonth: TaskMonth = currentYear[m] || {}
@@ -322,18 +333,18 @@ export const setTaskAtDay = (storage: TaskStorage, day: Date, event: ShortEventI
 	return newStorage
 }
 
-export const setTask = (storage: TaskStorage, event: ShortEventItemResponse): TaskSetResult => {
+export const setTask = (storage: TaskStorage, event: ShortEventItemResponse, utcOffset: number): TaskSetResult => {
 	try {
 		
-		const isOneDay = dayjs(event.time).isSame(dayjs(event.timeEnd), 'day')
+		const isOneDay = dayjs(event.time).utcOffset(utcOffset, false).isSame(dayjs(event.timeEnd).utcOffset(utcOffset, false), 'day')
 		
 		if (isOneDay) {
-			storage = setTaskAtDay(storage, dayjs(event.time).toDate(), event)
+			storage = setTaskAtDay(storage, dayjs(event.time).utcOffset(utcOffset, false).toDate(), event, utcOffset)
 			return {status: true, storage}
 		} else {
-			let i = dayjs(event.time)
-			while (i.isSameOrBefore(dayjs(event.timeEnd), 'day')) {
-				storage = setTaskAtDay(storage, i.toDate(), event)
+			let i = dayjs(event.time).utcOffset(utcOffset, false)
+			while (i.isSameOrBefore(dayjs(event.timeEnd).utcOffset(utcOffset, false), 'day')) {
+				storage = setTaskAtDay(storage, i.toDate(), event, utcOffset)
 				i = i.add(1, 'day')
 			}
 			return {status: true, storage}
@@ -347,11 +358,11 @@ export const setTask = (storage: TaskStorage, event: ShortEventItemResponse): Ta
 	}
 }
 
-export const getTaskStorage = (tasks: Array<ShortEventItemResponse>): TaskStorage => {
+export const getTaskStorage = (tasks: Array<ShortEventItemResponse>, utcOffset: number): TaskStorage => {
 	let r: TaskStorage = {}
 	
 	tasks.forEach((task) => {
-		const t = setTask(r, task)
+		const t = setTask(r, task, utcOffset)
 		r = t.storage
 	})
 	

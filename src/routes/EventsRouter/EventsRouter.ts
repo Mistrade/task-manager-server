@@ -58,7 +58,8 @@ interface GetTaskAtDayInputValues {
 	title: string | null,
 	priority: CalendarPriorityKeys | null,
 	taskStatus: FilterTaskStatuses,
-	onlyFavorites?: boolean
+	onlyFavorites?: boolean,
+	utcOffset: number,
 }
 
 interface GetTaskSchemeInputProps {
@@ -314,11 +315,11 @@ export const handlers = {
 					.json({})
 			}
 			
-			const shortEvents = eventsFromDB.map(EventTransformer.shortEventItemResponse)
+			const shortEvents = eventsFromDB.map((item) => EventTransformer.shortEventItemResponse(item))
 			
 			console.log(shortEvents)
 			
-			const storage = getTaskStorage(shortEvents)
+			const storage = getTaskStorage(shortEvents, req.body.utcOffset)
 			
 			return res
 				.status(200)
