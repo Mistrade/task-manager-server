@@ -7,6 +7,7 @@ import {
 import {CalendarsModelType} from "../../../mongo/models/Calendars";
 import {UserModelResponse, UtcDate} from "../session/types";
 import {Schema} from "mongoose";
+import {ShortUserModel} from "../../../mongo/models/User";
 
 export interface EventHistoryResponse {
 	date: UtcDate,
@@ -35,6 +36,7 @@ export interface FullResponseEventModel {
 	description: string,
 	link: EventLinkItem | null,
 	linkedFrom?: Schema.Types.ObjectId,
+	parentId?: Schema.Types.ObjectId,
 	members: Array<UserModelResponse>,
 	priority: CalendarPriorityKeys,
 	status: TaskStatusesType,
@@ -45,7 +47,11 @@ export interface FullResponseEventModel {
 	userId: UserModelResponse,
 	lastChange: UtcDate,
 	history: Array<EventHistoryResponse>,
-	calendar: CalendarResponse
+	calendar: CalendarResponse,
+	isLiked: boolean,
 }
 
-export type ShortEventItemResponse = Pick<FullResponseEventModel, 'title' | 'time' | 'timeEnd' | 'link' | 'id' | 'priority' | 'description' | 'status' | 'calendar'>
+export type ShortEventItemResponseWithoutUserId = Pick<FullResponseEventModel, 'title' | 'time' | 'timeEnd' | 'link' | 'id' | 'priority' | 'description' | 'status' | 'calendar' | 'isLiked'>
+export interface ShortEventItemResponse  extends  ShortEventItemResponseWithoutUserId {
+	userId: ShortUserModel
+}

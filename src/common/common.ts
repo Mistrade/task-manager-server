@@ -27,6 +27,7 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	history: 'Изменен список истории события',
 	userId: 'Изменен владелец события',
 	members: 'Добавлен(-ы) участник(-и) события', //+
+	isLiked: 'Добавлено/Удалено в(из) избранно(е|го)',
 }
 
 
@@ -43,6 +44,12 @@ export const getEventHistoryObject = (task: EventModel | null, body: SystemUpdat
 	}
 	
 	switch (field) {
+		case "isLiked":
+			return {
+				...DefaultData,
+				oldValue: `${task?.isLiked || false}`,
+				newValue: `${body.data}`,
+			}
 		case 'calendar':
 			return {
 				...DefaultData,
@@ -120,10 +127,11 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 		title: true,
 		members: true,
 		link: true,
-		calendar: true
+		calendar: true,
+		isLiked: true,
 	}
 	
-	if (!body.field || !body.id || !fieldsForUpdates[body.field] || !body.data) {
+	if (!body.field || !body.id || !fieldsForUpdates[body.field] || (!body.data && body.data !== false)) {
 		return 'Неверные данные для изменения значений'
 	}
 	
@@ -131,6 +139,14 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 	
 	
 	switch (field) {
+		case 'isLiked':
+			if (typeof data !== 'boolean') {
+				return 'Не удалось изменить состояние лайка'
+			}
+			
+			return {
+				isLiked: data
+			}
 		case 'calendar':
 			if (typeof data !== 'string') {
 				return 'Ожидался идентификатор календаря'
@@ -210,113 +226,6 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 		default:
 			return 'Неверные данные для редактирования события'
 	}
-}
-
-export const changeTaskData = (task: EventModel, body: UpdateTaskTypes, userId: UserModel): DbEventModel | string => {
-	const fieldsForUpdates: { [key in UpdateTaskTypes['field']]: boolean } = {
-		status: true,
-		priority: true,
-		description: true,
-		time: true,
-		timeEnd: true,
-		title: true,
-		members: true,
-		link: true,
-		calendar: true
-	}
-	
-	if (!body.field || !body.id || !fieldsForUpdates[body.field] || !body.data) {
-		return 'Неверные данные для изменения значений'
-	}
-	
-	const taskItem: DbEventModel = {
-		calendar: task.calendar._id,
-		_id: task._id,
-		lastChange: task.lastChange,
-		link: task.link,
-		linkedFrom: task.linkedFrom,
-		title: task.title,
-		type: task.type,
-		time: task.time,
-		timeEnd: task.timeEnd,
-		history: task.history.map(EventTransformer.historyItemDb),
-		description: task.description,
-		userId: task.userId._id,
-		status: task.status,
-		createdAt: task.createdAt,
-		members: task.members.map((item) => item._id),
-		priority: task.priority
-	}
-	
-	const {field, data, id: taskId} = body
-	
-	switch (field) {
-		case "title":
-			if (typeof data !== 'string') {
-				return 'Заголовок должен быть строкой'
-			}
-			taskItem.title = data
-			break;
-		case "description":
-			if (typeof data !== 'string') {
-				return 'Описание должно быть строкой'
-			}
-			taskItem.description = data
-			break;
-		case "link":
-			if (typeof data !== 'object' || !data.key || !data.value || typeof data.value !== 'string' || typeof data.key !== 'string') {
-				return 'Некорректная ссылка'
-			}
-			taskItem.link = data
-			break;
-		case "members":
-			// taskItem.members.push(data)
-			return 'MEMBERS NOT CHANGED'
-		case "timeEnd":
-			const endTime = dayjs(data)
-			if (typeof data !== 'string' || !endTime.isValid()) {
-				return 'Некорректная дата завершения события'
-			}
-			
-			if (endTime.isSameOrBefore(dayjs(taskItem.time), 'minute')) {
-				return 'Дата завершения должна быть после даты начала события'
-			}
-			
-			taskItem.timeEnd = dayjs(data).utc().toDate()
-			break;
-		case "time":
-			const newStartTime = dayjs(data).utc()
-			if (typeof data !== 'string' || !newStartTime.isValid()) {
-				return 'Некорректная дата начала события'
-			}
-			
-			const timeEnd = dayjs(taskItem.timeEnd).utc()
-			
-			if (newStartTime.isSameOrAfter(timeEnd, 'minute')) {
-				const duration = dayjs(taskItem.timeEnd).utc().diff(dayjs(taskItem.time).utc(), 'minute')
-				const timeEndResult = newStartTime.add(duration, 'minute')
-				
-				taskItem.timeEnd = timeEndResult.utc().toDate()
-				taskItem.time = newStartTime.utc().toDate()
-				break;
-			}
-			
-			taskItem.time = newStartTime.toDate()
-			break;
-		case "status":
-			taskItem.status = data
-			break;
-		case "priority":
-			taskItem.priority = data
-			break;
-		case "calendar":
-		
-		default:
-			return 'Неверные данные для редактирования события'
-	}
-	
-	
-	return taskItem
 }
 
 export const createBaseCalendars = async (user: UserModel) => {

@@ -1,4 +1,9 @@
-import {CalendarResponse, EventHistoryResponse, FullResponseEventModel, ShortEventItemResponse} from "./types";
+import {
+	CalendarResponse,
+	EventHistoryResponse,
+	FullResponseEventModel,
+	ShortEventItemResponse,
+} from "./types";
 import {DbEventHistoryItem, EventHistoryItem, EventModel} from "../../../mongo/models/EventModel";
 import dayjs from "dayjs";
 import {SessionTransformer} from "../session/session";
@@ -11,7 +16,7 @@ interface TransformerObject {
 	calendarItemResponse: (this: TransformerObject, data: CalendarsModel) => CalendarResponse,
 	historyItemResponse: (this: TransformerObject, data: EventHistoryItem) => EventHistoryResponse,
 	shortEventItemResponse: (this: TransformerObject, data: EventModel) => ShortEventItemResponse,
-	historyItemDb: (this: TransformerObject, data: EventHistoryItem) => DbEventHistoryItem
+	historyItemDb: (this: TransformerObject, data: EventHistoryItem) => DbEventHistoryItem,
 }
 
 
@@ -23,6 +28,7 @@ export const EventTransformer: TransformerObject = {
 			description: event.description,
 			link: event.link,
 			linkedFrom: event.linkedFrom,
+			parentId: event.parentId,
 			members: event.members.map(SessionTransformer.userModelResponse),
 			priority: event.priority,
 			status: event.status,
@@ -33,7 +39,8 @@ export const EventTransformer: TransformerObject = {
 			type: event.type,
 			userId: SessionTransformer.userModelResponse(event.userId),
 			lastChange: dayjs(event.lastChange).utc().toString(),
-			history: event.history.map(EventTransformer.historyItemResponse)
+			history: event.history.map(EventTransformer.historyItemResponse),
+			isLiked: event.isLiked,
 		}
 	},
 	calendarItemResponse(data) {
@@ -69,7 +76,9 @@ export const EventTransformer: TransformerObject = {
 			priority: data.priority,
 			title: data.title,
 			link: data.link,
-			calendar: EventTransformer.calendarItemResponse(data.calendar)
+			calendar: EventTransformer.calendarItemResponse(data.calendar),
+			isLiked: data.isLiked,
+			userId: SessionTransformer.shortUserModel(data.userId)
 		}
 	},
 	historyItemDb(data) {

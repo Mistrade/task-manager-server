@@ -10,9 +10,8 @@ import {
 import {UserModel} from "../../mongo/models/User";
 import {AuthMiddleware} from "../../middlewares/auth.middleware";
 import dayjs from "dayjs";
-import {Schema} from "mongoose";
+import {Expression, Schema, Types} from "mongoose";
 import {
-	changeTaskData,
 	getEventHistoryObject,
 	getTaskStorage, TaskStorage,
 	UpdateTaskInfo,
@@ -20,7 +19,12 @@ import {
 	utcString
 } from "../../common/common";
 import {UpdateTaskTypes} from "./types";
-import {colorRegExpDefault, colorRegExpRGBA, TaskStatusesObject} from "../../common/constants";
+import {
+	colorRegExpDefault,
+	colorRegExpRGBA,
+	TaskFilteredStatusesObject,
+	TaskStatusesObject
+} from "../../common/constants";
 import {Calendars, CalendarsModel} from "../../mongo/models/Calendars";
 import {FullResponseEventModel, ShortEventItemResponse} from "../../common/transform/events/types";
 import {EventTransformer} from "../../common/transform/events/events";
@@ -39,20 +43,22 @@ interface RequestTaskBody {
 	description?: string,
 	calendar: Schema.Types.ObjectId,
 	linkedFrom?: Schema.Types.ObjectId,
+	parentId?: Schema.Types.ObjectId
 }
 
 export interface AuthRequest<Data extends any = any, Params = any> extends express.Request<Params, any, Data> {
 	user?: UserModel
 }
 
-export type FilterTaskStatuses = 'in_work' | 'completed' | 'archive' | 'created'
+export type FilterTaskStatuses = 'in_work' | 'completed' | 'archive' | 'created' | 'all'
 
 interface GetTaskAtDayInputValues {
 	fromDate: string,
 	toDate: string,
 	title: string | null,
 	priority: CalendarPriorityKeys | null,
-	taskStatus: FilterTaskStatuses
+	taskStatus: FilterTaskStatuses,
+	onlyFavorites?: boolean
 }
 
 interface GetTaskSchemeInputProps {
@@ -82,7 +88,7 @@ interface GetTaskFiltersErrorReturned {
 type GetTaskFiltersScopeReturned = Partial<{ [key in keyof EventModel]: any }>
 
 export const getTaskFiltersOfScope = async (res: express.Response, user: UserModel, options: Partial<GetTaskAtDayInputValues>): Promise<GetTaskFiltersErrorReturned | GetTaskFiltersScopeReturned> => {
-	const {fromDate, toDate, title, priority, taskStatus} = options
+	const {fromDate, toDate, title, priority, taskStatus, onlyFavorites} = options
 	
 	const startDate = dayjs(fromDate)
 	
@@ -118,6 +124,10 @@ export const getTaskFiltersOfScope = async (res: express.Response, user: UserMod
 		calendar: {
 			$in: calendars.map((item) => item._id)
 		}
+	}
+	
+	if (onlyFavorites) {
+		filter.isLiked = onlyFavorites
 	}
 	
 	if (taskStatus) {
@@ -168,7 +178,8 @@ export const handlers = {
 				link,
 				description,
 				calendar,
-				linkedFrom
+				linkedFrom,
+				parentId
 			} = req.body
 			
 			const startTime = dayjs(time)
@@ -218,6 +229,7 @@ export const handlers = {
 			
 			const createdEvent = await Event.create({
 				linkedFrom: linkedFrom || undefined,
+				parentId: parentId || undefined,
 				calendar: resultCalendar,
 				title,
 				status,
@@ -235,6 +247,17 @@ export const handlers = {
 					getEventHistoryObject(null, {id: '', data: utcString(), field: 'createdAt'}, user)
 				]
 			})
+			
+			if (parentId && createdEvent._id) {
+				await Event.updateOne({
+					_id: parentId,
+				}, {
+					$push: {
+						childOf: createdEvent._id
+					}
+				})
+			}
+			
 			
 			return res.status(200).json({
 				data: {
@@ -369,39 +392,31 @@ export const handlers = {
 				return res.status(200).json({})
 			}
 			
-			const template: { [key in FilterTaskStatuses]: number } = {
+			const responseTemplate: { [key in FilterTaskStatuses]: number } = {
 				archive: 0,
 				created: 0,
 				completed: 0,
-				in_work: 0
-			}
-			
-			const statusMap: Partial<{ [key in TaskStatusesType]: FilterTaskStatuses }> = {}
-			
-			for (let key in TaskStatusesObject) {
-				const statuses = TaskStatusesObject[key as FilterTaskStatuses]
-				
-				statuses.forEach((item) => {
-					statusMap[item] = key as FilterTaskStatuses
-				})
-				
+				in_work: 0,
+				all: 0
 			}
 			
 			events.forEach((item) => {
-				const s: FilterTaskStatuses | undefined = statusMap[item.status]
+				const s: Array<FilterTaskStatuses> = TaskFilteredStatusesObject[item.status]
 				if (s) {
-					template[s]++
+					s.forEach((filterStatus) => {
+						responseTemplate[filterStatus]++
+					})
 				}
 			})
 			
-			return res.status(200).json(template)
+			return res.status(200).json(responseTemplate)
 			
 		} catch (e) {
 			console.log(e)
 			return res.status(500).json({})
 		}
 	},
-	async removeTask(req: AuthRequest<{ id: string }>, res: express.Response) {
+	async removeTask(req: AuthRequest<{ id: string, remove?: boolean }>, res: express.Response) {
 		try {
 			const {user, body} = req
 			
@@ -425,7 +440,7 @@ export const handlers = {
 				})
 			}
 			
-			if (event.status !== 'archive') {
+			if (event.status !== 'archive' && !body.remove) {
 				await Event.updateOne({
 					_id: taskId
 				}, {
@@ -440,6 +455,16 @@ export const handlers = {
 			await Event.deleteOne({
 				_id: taskId
 			})
+			
+			if(event.parentId){
+				await Event.updateOne({
+					_id: event.parentId,
+				}, {
+					$pull: {
+						childOf: event._id
+					}
+				})
+			}
 			
 			return res
 				.status(200)
@@ -625,7 +650,7 @@ export const handlers = {
 					})
 			}
 			
-			const hasData = !!body.data
+			const hasData = !!body.data || body.data === false
 			
 			if (!hasData) {
 				return res.status(400).json({
@@ -665,7 +690,7 @@ export const handlers = {
 			
 			const updated = await Event.updateOne({_id: task._id}, newTaskInfo)
 			
-			console.log('Союытие обнолено', updated)
+			console.log('Событие обновлено', updated)
 			
 			return res.status(200).json({
 				data: null,
@@ -975,7 +1000,7 @@ export const handlers = {
 			})
 		}
 	},
-	updateCalendarInfo: async function (req: AuthRequest<{ title: string, color: string, id: string }>, res: express.Response) {
+	async updateCalendarInfo (req: AuthRequest<{ title: string, color: string, id: string }>, res: express.Response) {
 		try {
 			const {user, body} = req
 			
