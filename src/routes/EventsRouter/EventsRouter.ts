@@ -314,16 +314,16 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({})
+					.status(403)
+					.json({})
 			}
 			
 			const filter = await getTaskFiltersOfScope(res, user, req.body)
 			
 			if ('json' in filter) {
 				return res
-				.status(filter.status)
-				.json(filter.json)
+					.status(filter.status)
+					.json(filter.json)
 			}
 			
 			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
@@ -335,8 +335,8 @@ export const handlers = {
 			
 			if (!eventsFromDB) {
 				return res
-				.status(404)
-				.json({})
+					.status(404)
+					.json({})
 			}
 			
 			const shortEvents = eventsFromDB.map((item) => EventTransformer.shortEventItemResponse(item))
@@ -344,15 +344,15 @@ export const handlers = {
 			const storage = getTaskStorage(shortEvents, req.body.utcOffset)
 			
 			return res
-			.status(200)
-			.json(storage)
+				.status(200)
+				.json(storage)
 			
 			
 		} catch (e) {
 			console.log(e)
 			return res
-			.status(500)
-			.json({})
+				.status(500)
+				.json({})
 		}
 	},
 	async getTaskAtDay(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItemResponse>>) {
@@ -361,43 +361,39 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json([])
+					.status(403)
+					.json([])
 			}
 			
 			const filter = await getTaskFiltersOfScope(res, user, req.body)
 			
 			if ('json' in filter) {
 				return res
-				.status(filter.status)
-				.json(filter.json)
+					.status(filter.status)
+					.json(filter.json)
 			}
 			
 			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
 				sort: {time: 1},
 				populate: [
-					{
-						path: 'history',
-						populate: 'userId',
-					},
 					{path: 'calendar'}
 				],
 			})
 			
 			if (eventsFromDB) {
 				return res
-				.status(200)
-				.json(eventsFromDB.map(EventTransformer.shortEventItemResponse))
+					.status(200)
+					.json(eventsFromDB.map(EventTransformer.shortEventItemResponse))
 			}
 			
 			return res
-			.status(404)
-			.json([])
+				.status(404)
+				.json([])
 			
 		} catch (e) {
 			return res
-			.status(500)
-			.json([])
+				.status(500)
+				.json([])
 		}
 	},
 	async getTaskCountOfStatus(req: AuthRequest<Omit<GetTaskAtDayInputValues, 'taskStatus'>>, res: express.Response<{ [key in FilterTaskStatuses]?: number }>) {
@@ -446,10 +442,10 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					message: 'Пользователь не найден'
-				})
+					.status(403)
+					.json({
+						message: 'Пользователь не найден'
+					})
 			}
 			
 			const {id: taskId} = body
@@ -499,17 +495,17 @@ export const handlers = {
 			}
 			
 			return res
-			.status(200)
-			.json({
-				message: 'Событие успешно удалено'
-			})
+				.status(200)
+				.json({
+					message: 'Событие успешно удалено'
+				})
 			
 		} catch (e) {
 			return res
-			.status(500)
-			.json({
-				message: 'При удалении события произошла непредвиденная ошибка'
-			})
+				.status(500)
+				.json({
+					message: 'При удалении события произошла непредвиденная ошибка'
+				})
 		}
 	},
 	async getTaskScheme(req: AuthRequest<GetTaskSchemeInputProps>, res: express.Response<CustomResponseBody<GetTaskSchemeResult>>) {
@@ -517,14 +513,14 @@ export const handlers = {
 			const {user, body} = req
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					data: null,
-					info: {
-						message: 'Не удалось найти пользователя',
-						type: 'error'
-					}
-				})
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Не удалось найти пользователя',
+							type: 'error'
+						}
+					})
 			}
 			
 			const {fromDate, toDate} = body
@@ -533,28 +529,28 @@ export const handlers = {
 			
 			if (!startDate.isValid()) {
 				return res
-				.status(400)
-				.json({
-					data: null,
-					info: {
-						message: 'Дата начала схемы событий - невалидна',
-						type: 'error'
-					}
-				})
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							message: 'Дата начала схемы событий - невалидна',
+							type: 'error'
+						}
+					})
 			}
 			
 			const endDate = dayjs(toDate)
 			
 			if (!endDate.isValid()) {
 				return res
-				.status(400)
-				.json({
-					data: null,
-					info: {
-						message: 'Дата завершения схемы событий - невалидна',
-						type: 'error'
-					}
-				})
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							message: 'Дата завершения схемы событий - невалидна',
+							type: 'error'
+						}
+					})
 			}
 			
 			const dateFilter = {
@@ -580,21 +576,21 @@ export const handlers = {
 				})
 				
 				return res
-				.status(200)
-				.json({
-					data: result,
-				})
+					.status(200)
+					.json({
+						data: result,
+					})
 			}
 			
 			return res
-			.status(200)
-			.json({
-				data: {},
-				info: {
-					message: 'События в данном промежутке дат - не найдены',
-					type: 'warning'
-				}
-			})
+				.status(200)
+				.json({
+					data: {},
+					info: {
+						message: 'События в данном промежутке дат - не найдены',
+						type: 'warning'
+					}
+				})
 			
 		} catch (e) {
 			
@@ -606,28 +602,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					data: null,
-					info: {
-						message: 'Пользователь не найден',
-						type: 'error'
-					}
-				})
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Пользователь не найден',
+							type: 'error'
+						}
+					})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-				.status(400)
-				.json({
-					data: null,
-					info: {
-						message: 'На вход ожидался ID события',
-						type: 'error'
-					}
-				})
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							message: 'На вход ожидался ID события',
+							type: 'error'
+						}
+					})
 			}
 			
 			const taskInfo: EventModel | null = await Event.findOne({
@@ -638,32 +634,32 @@ export const handlers = {
 			
 			if (!taskInfo) {
 				return res
-				.status(404)
-				.json({
-					data: null,
-					info: {
-						message: 'Событие не найдено',
-						type: 'warning'
-					}
-				})
+					.status(404)
+					.json({
+						data: null,
+						info: {
+							message: 'Событие не найдено',
+							type: 'warning'
+						}
+					})
 			}
 			
 			return res
-			.status(200)
-			.json({
-				data: EventTransformer.eventItemResponse(taskInfo)
-			})
+				.status(200)
+				.json({
+					data: EventTransformer.eventItemResponse(taskInfo)
+				})
 			
 		} catch (e) {
 			return res
-			.status(500)
-			.json({
-				data: null,
-				info: {
-					message: 'Произошла непредвиденная ошибка',
-					type: 'error'
-				}
-			})
+				.status(500)
+				.json({
+					data: null,
+					info: {
+						message: 'Произошла непредвиденная ошибка',
+						type: 'error'
+					}
+				})
 		}
 	},
 	async getChildOfList(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<Array<FullResponseEventModel>>>) {
@@ -672,28 +668,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					data: null,
-					info: {
-						message: 'Пользователь не найден',
-						type: 'error'
-					}
-				})
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Пользователь не найден',
+							type: 'error'
+						}
+					})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-				.status(400)
-				.json({
-					data: null,
-					info: {
-						message: 'На вход ожидался ID события',
-						type: 'error'
-					}
-				})
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							message: 'На вход ожидался ID события',
+							type: 'error'
+						}
+					})
 			}
 			
 			const taskInfo: EventModelWithPopulateChildOf | null = await Event.findOne({
@@ -702,32 +698,32 @@ export const handlers = {
 			
 			if (!taskInfo) {
 				return res
-				.status(404)
-				.json({
-					data: null,
-					info: {
-						message: 'Событие не найдено',
-						type: 'warning'
-					}
-				})
+					.status(404)
+					.json({
+						data: null,
+						info: {
+							message: 'Событие не найдено',
+							type: 'warning'
+						}
+					})
 			}
 			
 			return res
-			.status(200)
-			.json({
-				data: taskInfo.childOf.map(EventTransformer.eventItemResponse)
-			})
+				.status(200)
+				.json({
+					data: taskInfo.childOf.map(EventTransformer.eventItemResponse)
+				})
 			
 		} catch (e) {
 			return res
-			.status(500)
-			.json({
-				data: null,
-				info: {
-					message: 'Произошла непредвиденная ошибка',
-					type: 'error'
-				}
-			})
+				.status(500)
+				.json({
+					data: null,
+					info: {
+						message: 'Произошла непредвиденная ошибка',
+						type: 'error'
+					}
+				})
 		}
 	},
 	async updateTaskInfo(req: AuthRequest<UpdateTaskTypes>, res: express.Response<CustomResponseBody<null>>) {
@@ -737,14 +733,14 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					data: null,
-					info: {
-						message: 'Пользователь не найден',
-						type: 'error'
-					}
-				})
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Пользователь не найден',
+							type: 'error'
+						}
+					})
 			}
 			
 			const hasData = !!body.data || body.data === null || body.data === false
@@ -1145,14 +1141,14 @@ export const handlers = {
 			
 			if (!calendar) {
 				return res
-				.status(404)
-				.json({
-					data: null,
-					info: {
-						type: 'error',
-						message: 'Не удалось изменить календарь, так как он не найден'
-					}
-				})
+					.status(404)
+					.json({
+						data: null,
+						info: {
+							type: 'error',
+							message: 'Не удалось изменить календарь, так как он не найден'
+						}
+					})
 			}
 			if (calendar.title === title && calendar.color === color) {
 				return res.status(200).json({
@@ -1200,13 +1196,13 @@ export const handlers = {
 			})
 			
 			return res.status(200)
-			.json({
-				data: null,
-				info: {
-					type: 'success',
-					message: 'Успешно обновлено'
-				}
-			})
+				.json({
+					data: null,
+					info: {
+						type: 'success',
+						message: 'Успешно обновлено'
+					}
+				})
 			
 		} catch (e) {
 			console.log(e)
@@ -1225,28 +1221,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-				.status(403)
-				.json({
-					data: null,
-					info: {
-						message: 'Пользователь не найден',
-						type: 'error'
-					}
-				})
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Пользователь не найден',
+							type: 'error'
+						}
+					})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-				.status(400)
-				.json({
-					data: null,
-					info: {
-						message: 'На вход ожидался ID события',
-						type: 'error'
-					}
-				})
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							message: 'На вход ожидался ID события',
+							type: 'error'
+						}
+					})
 			}
 			
 			const historyListFromDb: Array<EventHistoryPopulatedItem> | null = await EventHistory.find(
@@ -1277,14 +1273,14 @@ export const handlers = {
 			
 		} catch (e) {
 			return res
-			.status(500)
-			.json({
-				data: null,
-				info: {
-					message: 'Не удалось получить историю события',
-					type: 'error'
-				}
-			})
+				.status(500)
+				.json({
+					data: null,
+					info: {
+						message: 'Не удалось получить историю события',
+						type: 'error'
+					}
+				})
 		}
 	}
 }
