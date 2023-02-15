@@ -132,7 +132,7 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 		isLiked: true,
 	}
 	
-	if (!body.field || !body.id || !fieldsForUpdates[body.field] || (!body.data && body.data !== false)) {
+	if (!body.field || !body.id || !fieldsForUpdates[body.field] || (!body.data && body.data !== false && body.data !== null)) {
 		return 'Неверные данные для изменения значений'
 	}
 	
@@ -173,6 +173,12 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 				description: data
 			}
 		case "link":
+			if(data === null){
+				return {
+					link: data
+				}
+			}
+			
 			if (typeof data !== 'object' || !data.key || !data.value || typeof data.value !== 'string' || typeof data.key !== 'string') {
 				return 'Некорректная ссылка'
 			}

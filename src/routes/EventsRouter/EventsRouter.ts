@@ -723,7 +723,7 @@ export const handlers = {
 					})
 			}
 			
-			const hasData = !!body.data || body.data === false
+			const hasData = !!body.data || body.data === null || body.data === false
 			
 			if (!hasData) {
 				return res.status(400).json({
