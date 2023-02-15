@@ -1,7 +1,8 @@
 import {model, Schema} from "mongoose";
 import autopopulate from 'mongoose-autopopulate'
-import {UserModel} from "./User";
+import {UserModel, UserPopulatedWithoutPass} from "./User";
 import dayjs from "dayjs";
+import {UserModelHelper} from "../helpers/User";
 
 export type CalendarsModelType = 'Invite' | 'Custom' | 'Main'
 
@@ -18,7 +19,12 @@ export interface CalendarsModel {
 }
 
 const CalendarsSchema = new Schema({
-	userId: {type: Schema.Types.ObjectId, ref: 'User', autopopulate: true},
+	userId: {
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		autopopulate: true,
+		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
+	},
 	created: {type: Date, default: () => dayjs().utc().toDate()},
 	isSelected: {type: Boolean, required: true, default: true},
 	title: {type: String, required: true},

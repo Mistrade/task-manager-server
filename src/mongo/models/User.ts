@@ -1,4 +1,6 @@
 import {model, Schema} from "mongoose";
+import {UserModelHelper} from "../helpers/User";
+import {UserModelResponse} from "../../common/transform/session/types";
 
 export interface UserModel {
 	_id: Schema.Types.ObjectId,
@@ -8,11 +10,11 @@ export interface UserModel {
 	surname?: string,
 	patronymic?: string,
 	created: Date,
-	lastUpdate?: string,
+	lastUpdate?: Date,
 	password: string
 }
 
-export type ShortUserModel = Pick<UserModel, 'name' | 'surname' | '_id'>
+export type ShortUserModel = Pick<UserModelResponse, 'name' | 'surname' | '_id'>
 
 const UserSchema = new Schema({
 	email: {type: String, required: false},
@@ -24,6 +26,20 @@ const UserSchema = new Schema({
 	lastUpdate: {type: Date, required: true},
 	password: {type: String, required: true}
 })
+
+export const UserPopulatedWithoutPass = {
+	type: Schema.Types.ObjectId,
+	ref: 'User',
+	autopopulate: true,
+	get: UserModelHelper.getPopulatedUserWithoutPassword
+}
+export const UserPopulatedRequired = {
+	type: Schema.Types.ObjectId,
+	ref: 'User',
+	required: true,
+	autopopulate: true,
+	get: UserModelHelper.getPopulatedUserWithoutPassword
+}
 
 export const User = model<UserModel>('User', UserSchema)
 

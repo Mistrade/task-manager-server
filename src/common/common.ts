@@ -1,9 +1,8 @@
-import {DbEventModel, EventHistoryItem, EventModel} from "../mongo/models/EventModel";
+import {DbEventModel, EventModel} from "../mongo/models/EventModel";
 import dayjs, {Dayjs} from "dayjs";
-import {SystemUpdateTaskTypes, UpdateTaskTypes} from "../routes/EventsRouter/types";
+import {UpdateTaskTypes} from "../routes/EventsRouter/types";
 import {UserModel} from "../mongo/models/User";
 import {Calendars, CalendarsModel} from "../mongo/models/Calendars";
-import {EventTransformer} from "./transform/events/events";
 import {ShortEventItemResponse} from "./transform/events/types";
 
 export type HistoryDescriptionObject = {
@@ -12,8 +11,8 @@ export type HistoryDescriptionObject = {
 
 export const HistoryDescription: HistoryDescriptionObject = {
 	_id: 'Изменен ID события',
-	calendar: 'Изменен календарь, за которым было закреплено событие',
-	createdAt: 'Событие было создано',
+	calendar: 'Изменен календарь события',
+	createdAt: 'Событие создано',
 	status: 'Изменен статус события', //+
 	priority: 'Изменен приоритет события', //+
 	description: 'Изменено описание события', //+
@@ -24,95 +23,106 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	linkedFrom: 'Событие было клонировано от другого события',
 	title: 'Изменен заголовок события', //+
 	type: 'Изменен тип события',
-	history: 'Изменен список истории события',
 	userId: 'Изменен владелец события',
 	members: 'Добавлен(-ы) участник(-и) события', //+
 	isLiked: 'Добавлено/Удалено в(из) избранно(е|го)',
 	childOf: "123"
 }
 
-
-export const getEventHistoryObject = (task: EventModel | null, body: SystemUpdateTaskTypes, userId: UserModel): EventHistoryItem => {
-	const {field, data} = body
-	
-	const date = dayjs().utc().toDate()
-	
-	const DefaultData = {
-		date,
-		field,
-		userId,
-		description: HistoryDescription[field]
-	}
-	
-	switch (field) {
-		case "isLiked":
-			return {
-				...DefaultData,
-				oldValue: `${task?.isLiked || false}`,
-				newValue: `${body.data}`,
-			}
-		case 'calendar':
-			return {
-				...DefaultData,
-				oldValue: task?.calendar.title || '',
-				newValue: `${body.data}`
-			}
-		case "createdAt":
-			return {
-				...DefaultData,
-				oldValue: task?.createdAt ? dayjs(task.createdAt).utc().toString() : '',
-				newValue: body.data
-			}
-		case "link":
-			return {
-				...DefaultData,
-				oldValue: task && task[field] ? task[field]?.value || '' : '',
-				newValue: data?.value,
-			}
-		case "priority":
-			return {
-				...DefaultData,
-				oldValue: (task && task[field]) || '',
-				newValue: data,
-			}
-		case "status":
-			return {
-				...DefaultData,
-				oldValue: (task && task[field]) || '',
-				newValue: data,
-			}
-		case "time":
-			return {
-				...DefaultData,
-				oldValue: (task && dayjs(task[field]).utc().toString()) || '',
-				newValue: dayjs(data).utc().toString(),
-			}
-		case "timeEnd":
-			return {
-				...DefaultData,
-				oldValue: (task && dayjs(task[field]).utc().toString()) || '',
-				newValue: dayjs(data).utc().toString(),
-			}
-		case "title":
-			return {
-				...DefaultData,
-				oldValue: (task && task[field]) || '',
-				newValue: data,
-			}
-		case "description":
-			return {
-				...DefaultData,
-				oldValue: (task && task[field]) || '',
-				newValue: data,
-			}
-		case "members":
-			return {
-				...DefaultData,
-				oldValue: '',
-				newValue: ''
-			}
-	}
+export const UpdateTaskDescription: { [key in UpdateTaskTypes['field']]: string} = {
+	status: "Изменен статус",
+	calendar: "Изменен календарь",
+	description: "Изменено описание",
+	priority: "Изменен приоритет",
+	link: "Изменена ссылка для подключения",
+	members: "Изменен список участников",
+	time: "Изменено время начала",
+	timeEnd: "Изменено время завершения",
+	title: "Изменено название (заголовок)",
+	isLiked: "Событие было помечено (снято) как особое"
 }
+
+// export const getEventHistoryObject = (task: EventModel | null, body: SystemUpdateTaskTypes, userId: UserModel): EventHistoryItem => {
+// 	const {field, data} = body
+//
+// 	const date = dayjs().utc().toDate()
+//
+// 	const DefaultData = {
+// 		date,
+// 		field,
+// 		userId,
+// 		description: HistoryDescription[field]
+// 	}
+//
+// 	switch (field) {
+// 		case "isLiked":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: `${task?.isLiked || false}`,
+// 				newValue: `${body.data}`,
+// 			}
+// 		case 'calendar':
+// 			return {
+// 				...DefaultData,
+// 				oldValue: task?.calendar.title || '',
+// 				newValue: `${body.data}`
+// 			}
+// 		case "createdAt":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: task?.createdAt ? dayjs(task.createdAt).utc().toString() : '',
+// 				newValue: body.data
+// 			}
+// 		case "link":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: task && task[field] ? task[field]?.value || '' : '',
+// 				newValue: data?.value,
+// 			}
+// 		case "priority":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && task[field]) || '',
+// 				newValue: data,
+// 			}
+// 		case "status":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && task[field]) || '',
+// 				newValue: data,
+// 			}
+// 		case "time":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && dayjs(task[field]).utc().toString()) || '',
+// 				newValue: dayjs(data).utc().toString(),
+// 			}
+// 		case "timeEnd":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && dayjs(task[field]).utc().toString()) || '',
+// 				newValue: dayjs(data).utc().toString(),
+// 			}
+// 		case "title":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && task[field]) || '',
+// 				newValue: data,
+// 			}
+// 		case "description":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: (task && task[field]) || '',
+// 				newValue: data,
+// 			}
+// 		case "members":
+// 			return {
+// 				...DefaultData,
+// 				oldValue: '',
+// 				newValue: ''
+// 			}
+// 	}
+// }
 
 export type UpdateTaskInfoReturn = {
 	[key in keyof EventModel]?: DbEventModel[key]
@@ -173,7 +183,7 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 				description: data
 			}
 		case "link":
-			if(data === null){
+			if (data === null) {
 				return {
 					link: data
 				}
@@ -373,4 +383,14 @@ export const getTaskStorage = (tasks: Array<ShortEventItemResponse>, utcOffset: 
 	})
 	
 	return r || {}
+}
+
+export const eventSnapshot = (event: EventModel, changed: Date): DbEventModel => {
+	return {
+		...event,
+		userId: event.userId._id,
+		calendar: event.calendar._id,
+		lastChange: changed,
+		members: event.members.map((item) => item._id),
+	}
 }

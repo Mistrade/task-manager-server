@@ -1,6 +1,5 @@
 import {
 	CalendarPriorityKeys,
-	EventHistoryFields,
 	EventLinkItem,
 	TaskStatusesType
 } from "../../../mongo/models/EventModel";
@@ -8,15 +7,6 @@ import {CalendarsModelType} from "../../../mongo/models/Calendars";
 import {UserModelResponse, UtcDate} from "../session/types";
 import {Schema} from "mongoose";
 import {ShortUserModel} from "../../../mongo/models/User";
-
-export interface EventHistoryResponse {
-	date: UtcDate,
-	field: keyof EventHistoryFields,
-	description: string,
-	userId: UserModelResponse,
-	oldValue: string,
-	newValue: string,
-}
 
 export interface CalendarResponse {
 	_id: Schema.Types.ObjectId,
@@ -46,7 +36,6 @@ export interface FullResponseEventModel {
 	type: string,
 	userId: UserModelResponse,
 	lastChange: UtcDate,
-	history: Array<EventHistoryResponse>,
 	calendar: CalendarResponse,
 	isLiked: boolean,
 	childOf: Array<Schema.Types.ObjectId>
