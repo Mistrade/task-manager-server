@@ -1,6 +1,6 @@
 import {Schema} from "mongoose";
 import dayjs from "dayjs";
-import {DbEventModel, EventModel, EventSchema} from "./EventModel";
+import {DbEventModel, EventModel, EventModelWithPopulateChildOf, EventSchema} from "./EventModel";
 import * as mongoose from "mongoose";
 import {UserModelHelper} from "../helpers/User";
 import {UserModel} from "./User";
@@ -23,7 +23,7 @@ export interface EventHistoryPopulatedItem {
 	changeUserId: UserModelResponse,
 	eventId: Schema.Types.ObjectId,
 	snapshotDescription: string,
-	eventSnapshot: EventModel,
+	eventSnapshot: EventModelWithPopulateChildOf,
 }
 
 export interface EventHistoryResponseItem extends Omit<EventHistoryPopulatedItem, 'eventSnapshot'> {

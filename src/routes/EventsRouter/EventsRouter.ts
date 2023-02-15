@@ -268,10 +268,14 @@ export const handlers = {
 			}
 			
 			if (parentId && createdEvent._id) {
-				const parentEvent: EventModel | null = await Event.findOneAndUpdate<EventModel>(
+				await Event.updateOne<EventModel>(
 					{_id: parentId},
 					{$push: {childOf: createdEvent._id}}
 				)
+				
+				const parentEvent: EventModel | null = await Event.findOne({
+					_id: parentId
+				})
 				
 				if (parentEvent) {
 					await EventHistory.create(
@@ -475,6 +479,11 @@ export const handlers = {
 			await Event.deleteOne({
 				_id: taskId
 			})
+			
+			await EventHistory.deleteMany({
+				eventId: taskId
+			})
+			
 			
 			if (event.parentId) {
 				await Event.updateOne({
@@ -1249,7 +1258,10 @@ export const handlers = {
 				{eventId: params.taskId},
 				{},
 				{sort: {date: -1}}
-			)
+			).populate({
+				path: 'eventSnapshot',
+				populate: "childOf"
+			})
 			
 			if (!historyListFromDb) {
 				return res.status(404).json({
@@ -1267,7 +1279,7 @@ export const handlers = {
 					fieldName: item.fieldName,
 					snapshotDescription: item.snapshotDescription,
 					eventId: item.eventId,
-					eventSnapshot: EventTransformer.eventItemResponse(item.eventSnapshot)
+					eventSnapshot: EventTransformer.eventItemResponse(item.eventSnapshot as unknown as EventModel)
 				}))
 			})
 			
