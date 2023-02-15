@@ -467,6 +467,14 @@ export const handlers = {
 				})
 			}
 			
+			if(event.childOf.length > 0){
+				await Event.updateMany({
+					parentId: event._id
+				}, {
+					parentId: undefined
+				})
+			}
+			
 			return res
 				.status(200)
 				.json({
