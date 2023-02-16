@@ -21,7 +21,7 @@ import {
 	UpdateTaskInfo,
 	utcDate
 } from "../../common/common";
-import {UpdateTaskTypes} from "./types";
+import {EventChainsObject, RequestCommentAddProps, UpdateTaskTypes} from "./types";
 import {
 	colorRegExpDefault,
 	colorRegExpRGBA,
@@ -37,6 +37,7 @@ import {
 	EventHistoryPopulatedItem,
 	EventHistoryResponseItem
 } from "../../mongo/models/EventHistory";
+import {Comment, CommentModel, CommentSchema} from "../../mongo/models/Comment";
 
 const route = express.Router()
 
@@ -497,6 +498,9 @@ export const handlers = {
 				eventId: taskId
 			})
 			
+			await Comment.deleteMany({
+				eventId: taskId
+			})
 			
 			if (event.parentId) {
 				await Event.updateOne({
@@ -700,7 +704,7 @@ export const handlers = {
 				})
 		}
 	},
-	async getChildOfList(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<Array<FullResponseEventModel>>>) {
+	async getEventChains(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<EventChainsObject>>) {
 		try {
 			const {user, params} = req
 			
@@ -732,7 +736,8 @@ export const handlers = {
 			
 			const taskInfo: EventModelWithPopulateChildOf | null = await Event.findOne({
 				_id: params.taskId
-			}).populate('childOf')
+			})
+				.populate(['childOf', 'parentId', 'linkedFrom'])
 			
 			if (!taskInfo) {
 				return res
@@ -749,7 +754,11 @@ export const handlers = {
 			return res
 				.status(200)
 				.json({
-					data: taskInfo.childOf.map(EventTransformer.eventItemResponse)
+					data: {
+						childrenEvents: taskInfo.childOf.length ? taskInfo.childOf.map(EventTransformer.eventItemResponse) : null,
+						parentEvent: taskInfo.parentId ? EventTransformer.eventItemResponse(taskInfo.parentId) : null,
+						linkedFromEvent: taskInfo.linkedFrom ? EventTransformer.eventItemResponse(taskInfo.linkedFrom) : null
+					}
 				})
 			
 		} catch (e) {
@@ -1334,12 +1343,241 @@ export const handlers = {
 				})
 		}
 	},
-	async getEventCommentList(req: AuthRequest, res: express.Response) {
-	
-	
+	async getEventCommentList(req: AuthRequest<null, { taskId?: string }>, res: express.Response<CustomResponseBody<Array<CommentModel>>>) {
+		try {
+			const {user, params} = req
+			
+			if (!user) {
+				return res
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Не удалось проверить сессию текущего пользователя',
+							type: 'error'
+						}
+					})
+			}
+			
+			const {taskId} = params
+			
+			if (!taskId) {
+				return res
+					.status(400)
+					.json({
+						data: null,
+						info: {
+							type: "warning",
+							message: "TaskId is undefined or not correct"
+						}
+					})
+			}
+			
+			const task: EventModel | null = await Event.findOne({
+				_id: taskId
+			})
+			
+			
+			if (!task) {
+				return res
+					.status(404)
+					.json({
+						data: null,
+						info: {type: "error", message: "Событие не найдено"}
+					})
+			}
+			
+			if (
+				!objectIdIsEquals(user._id, task.userId._id)
+				&& !objectIdInArrayOfAnotherObjectId(user._id, task.members)
+			) {
+				return res
+					.status(403)
+					.json({
+						data: null,
+						info: {type: "error", message: "Вы не можете просматривать комментарии к этому событию"}
+					})
+			}
+			
+			const comments: Array<CommentModel> | null = await Comment.find(
+				{eventId: taskId},
+				{},
+				{sort: {date: -1}}
+			)
+			
+			if (!comments) {
+				return res
+					.status(500)
+					.json({
+						data: null,
+						info: {type: 'info', message: "Комментарии не найдены"}
+					})
+			}
+			
+			return res.status(200).json({
+				data: comments,
+			})
+			
+		} catch (e) {
+			console.error(e)
+			return res
+				.status(500)
+				.json({
+					data: null,
+					info: {
+						message: 'Произошла ошибка, мы уже работаем над этим',
+						type: 'error'
+					}
+				})
+		}
+		
 	},
-	async addEventComment(req: AuthRequest, res: express.Response) {
-	
+	async addEventComment(req: AuthRequest<RequestCommentAddProps>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			const {user, body} = req
+			
+			if (!user) {
+				return res
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							message: 'Не удалось проверить сессию текущего пользователя',
+							type: 'error'
+						}
+					})
+			}
+			
+			
+			const {eventId, message} = body
+			
+			const event: EventModel | null = await Event.findOne({
+				_id: eventId
+			})
+			
+			if (!event) {
+				return res.status(404).json({
+					data: null,
+					info: {
+						type: "error",
+						message: "Комментарий не был сохранен, так как событие не найдено, попробуйте еще раз."
+					}
+				})
+			}
+			
+			if (
+				!objectIdIsEquals(user._id, event.userId._id)
+				&& !objectIdInArrayOfAnotherObjectId(user._id, event.members)
+			) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						type: 'error',
+						message: "Вы не можете комментировать это событие"
+					}
+				})
+			}
+			
+			await Comment.create<CommentSchema>({
+				eventId,
+				message,
+				userId: user._id,
+			})
+			
+			return res.status(200).json({data: null})
+			
+		} catch (e) {
+			return res
+				.status(500)
+				.json({
+					data: null,
+					info: {
+						message: 'Не удалось сохранить комментарий',
+						type: 'error'
+					}
+				})
+		}
+	},
+	async removeEventComment(req: AuthRequest<{ commentId?: string }, null>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			
+			const {user, body} = req
+			
+			
+			if (!user) {
+				return res.status(403).json({
+					data: null,
+					info: {type: 'error', message: "Не удалось проверить сессию текущего пользователя"}
+				})
+			}
+			
+			const {commentId} = body
+			
+			if (!commentId) {
+				return res.status(400).json({
+					data: null,
+					info: {type: 'error', message: "Недостаточно данных для совершения действия"}
+				})
+			}
+			
+			const comment: CommentModel | null = await Comment.findOne({
+				_id: commentId,
+			})
+			
+			if (!comment) {
+				return res.status(404).json({
+					data: null,
+					info: {type: "warning", message: "Комментарий не найден"}
+				})
+			}
+			
+			const event: EventModel | null = await Event.findOne({
+				_id: comment.eventId
+			})
+			
+			if (!event) {
+				return res.status(404).json({
+					data: null,
+					info: {type: 'warning', message: "Событие не найдено"}
+				})
+			}
+			
+			const canIDelete = ((): boolean => {
+				const isCreator = objectIdIsEquals(event.userId._id, user._id)
+				
+				if (isCreator) return true
+				
+				const isMyComment = objectIdIsEquals(user._id, comment.userId._id)
+				
+				if (isMyComment) return true
+				
+				return false
+			})()
+			
+			
+			if (!canIDelete) {
+				return res.status(403).json({
+					data: null,
+					info: {type: 'error', message: "Вы не можете удалить этот комментарий"}
+				})
+			}
+			
+			await Comment.deleteOne({
+				_id: commentId
+			})
+			
+			return res.status(200).json({
+				data: null,
+				info: {type: "success", message: "Комментарий успешно удален"}
+			})
+			
+		} catch (e) {
+			console.error(e)
+			return res.status(500).json({
+				data: null,
+				info: {type: "error", message: "Не удалось удалить комментарий"}
+			})
+		}
 	}
 }
 
@@ -1352,7 +1590,7 @@ route.post('/remove', handlers.removeTask)
 route.post('/getTasksScheme', handlers.getTaskScheme)
 route.post('/taskInfo/update', handlers.updateTaskInfo)
 route.get('/taskInfo/:taskId', handlers.getTaskInfo)
-route.get('/getChildOfList/:taskId', handlers.getChildOfList)
+route.get('/getEventChains/:taskId', handlers.getEventChains)
 route.get('/getEventHistory/:taskId', handlers.getEventHistory)
 route.post('/calendars', handlers.getCalendarsList)
 route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
@@ -1360,8 +1598,9 @@ route.post('/calendars/create', handlers.createCalendar)
 route.post('/calendars/remove', handlers.removeCalendar)
 route.get('/calendars/info/:calendarId', handlers.getCalendarInfo)
 route.post('/calendars/update', handlers.updateCalendarInfo)
-route.get('/event/comments', handlers.getEventCommentList)
-route.post('/event/comments/add', handlers.addEventComment)
+route.get('/comments/:taskId', handlers.getEventCommentList)
+route.post('/comments/add', handlers.addEventComment)
+route.post('/comments/remove', handlers.removeEventComment)
 
 
 export const EventsRouter = route

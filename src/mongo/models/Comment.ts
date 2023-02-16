@@ -4,6 +4,7 @@ import {UserModel} from "./User";
 import {utcDate} from "../../common/common";
 import * as mongoose from "mongoose";
 import {UserModelResponse} from "../../common/transform/session/types";
+import autopopulate from "mongoose-autopopulate";
 
 export interface CommentSchema {
 	eventId: Schema.Types.ObjectId,
@@ -31,5 +32,7 @@ export const CommentSchema = new Schema({
 	date: {type: Date, required: true, default: () => utcDate()},
 	message: {type: String, required: true, maxLength: 3000},
 })
+
+CommentSchema.plugin(autopopulate)
 
 export const Comment = mongoose.model('Comment', CommentSchema)

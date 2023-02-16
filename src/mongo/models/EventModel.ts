@@ -47,8 +47,10 @@ export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'c
 	calendar: CalendarsModel,
 }
 
-export interface EventModelWithPopulateChildOf extends Omit<EventModel, 'childOf'> {
-	childOf: Array<EventModel>
+export interface EventModelWithPopulateChildOf extends Omit<EventModel, 'childOf' | 'linkedFrom' | 'parentId'> {
+	childOf: Array<EventModel>,
+	parentId: EventModel,
+	linkedFrom: EventModel
 }
 
 const LinkSchema = new Schema({

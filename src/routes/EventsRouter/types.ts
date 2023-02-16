@@ -1,5 +1,6 @@
 import {CalendarPriorityKeys, EventLinkItem, TaskStatusesType} from "../../mongo/models/EventModel";
 import {Schema} from "mongoose";
+import {FullResponseEventModel} from "../../common/transform/events/types";
 
 export interface UpdateTaskPriority {
 	id: string,
@@ -67,3 +68,14 @@ export interface UpdateTaskCreatedAt {
 }
 
 export type SystemUpdateTaskTypes = UpdateTaskTypes | UpdateTaskCreatedAt
+
+export interface RequestCommentAddProps {
+	message: string,
+	eventId: Schema.Types.ObjectId
+}
+
+export interface EventChainsObject {
+	parentEvent: null | FullResponseEventModel,
+	childrenEvents: null | Array<FullResponseEventModel>,
+	linkedFromEvent: null | FullResponseEventModel
+}
