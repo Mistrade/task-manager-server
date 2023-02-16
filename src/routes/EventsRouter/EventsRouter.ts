@@ -1,22 +1,25 @@
 import express from "express";
 import {
 	CalendarPriorityKeys,
-	DbEventModel,
 	Event,
 	EventLinkItem,
-	EventModel, EventModelWithPopulateChildOf,
+	EventModel,
+	EventModelWithPopulateChildOf,
 	TaskStatusesType
 } from "../../mongo/models/EventModel";
 import {UserModel} from "../../mongo/models/User";
 import {AuthMiddleware} from "../../middlewares/auth.middleware";
 import dayjs from "dayjs";
-import {Expression, Schema, Types} from "mongoose";
+import {Schema} from "mongoose";
 import {
 	eventSnapshot,
-	getTaskStorage, TaskStorage, UpdateTaskDescription,
+	getTaskStorage,
+	objectIdInArrayOfAnotherObjectId,
+	objectIdIsEquals,
+	TaskStorage,
+	UpdateTaskDescription,
 	UpdateTaskInfo,
-	utcDate,
-	utcString
+	utcDate
 } from "../../common/common";
 import {UpdateTaskTypes} from "./types";
 import {
@@ -31,8 +34,8 @@ import {EventTransformer} from "../../common/transform/events/events";
 import {
 	createEventHistoryNote,
 	EventHistory,
-	EventHistoryDb,
-	EventHistoryPopulatedItem, EventHistoryResponseItem
+	EventHistoryPopulatedItem,
+	EventHistoryResponseItem
 } from "../../mongo/models/EventHistory";
 
 const route = express.Router()
@@ -464,6 +467,16 @@ export const handlers = {
 				})
 			}
 			
+			if (!objectIdIsEquals(user._id, event.userId._id)) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						type: 'error',
+						message: "Удалить событие или перенести его в архив может только создатель события"
+					}
+				})
+			}
+			
 			if (event.status !== 'archive' && !body.remove) {
 				await Event.updateOne({
 					_id: taskId
@@ -653,6 +666,22 @@ export const handlers = {
 					})
 			}
 			
+			
+			if (
+				!objectIdIsEquals(user._id, taskInfo.userId._id)
+				&& !objectIdInArrayOfAnotherObjectId(user._id, taskInfo.members)
+			) {
+				return res
+					.status(403)
+					.json({
+						data: null,
+						info: {
+							type: 'error',
+							message: "Вы не можете просматривать это событие, так как у вас не хватает прав доступа"
+						}
+					})
+			}
+			
 			return res
 				.status(200)
 				.json({
@@ -774,6 +803,16 @@ export const handlers = {
 					info: {
 						message: 'Неверный идентификатор события',
 						type: 'error'
+					}
+				})
+			}
+			
+			if (!objectIdIsEquals(user._id, task.userId._id)) {
+				return res.status(403).json({
+					data: null,
+					info: {
+						message: "Вы не можете вносить правки в это событие",
+						type: "error"
 					}
 				})
 			}
@@ -1294,6 +1333,13 @@ export const handlers = {
 					}
 				})
 		}
+	},
+	async getEventCommentList(req: AuthRequest, res: express.Response) {
+	
+	
+	},
+	async addEventComment(req: AuthRequest, res: express.Response) {
+	
 	}
 }
 
@@ -1314,6 +1360,8 @@ route.post('/calendars/create', handlers.createCalendar)
 route.post('/calendars/remove', handlers.removeCalendar)
 route.get('/calendars/info/:calendarId', handlers.getCalendarInfo)
 route.post('/calendars/update', handlers.updateCalendarInfo)
+route.get('/event/comments', handlers.getEventCommentList)
+route.post('/event/comments/add', handlers.addEventComment)
 
 
 export const EventsRouter = route

@@ -4,6 +4,7 @@ import {UpdateTaskTypes} from "../routes/EventsRouter/types";
 import {UserModel} from "../mongo/models/User";
 import {Calendars, CalendarsModel} from "../mongo/models/Calendars";
 import {ShortEventItemResponse} from "./transform/events/types";
+import {Schema} from "mongoose";
 
 export type HistoryDescriptionObject = {
 	[key in keyof EventModel]: string
@@ -29,7 +30,7 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	childOf: "123"
 }
 
-export const UpdateTaskDescription: { [key in UpdateTaskTypes['field']]: string} = {
+export const UpdateTaskDescription: { [key in UpdateTaskTypes['field']]: string } = {
 	status: "Изменен статус",
 	calendar: "Изменен календарь",
 	description: "Изменено описание",
@@ -393,4 +394,12 @@ export const eventSnapshot = (event: EventModel, changed: Date): DbEventModel =>
 		lastChange: changed,
 		members: event.members.map((item) => item._id),
 	}
+}
+
+export const objectIdIsEquals = (userObjectId1: Schema.Types.ObjectId, userObjectId2: Schema.Types.ObjectId) => {
+	return userObjectId1.toString() === userObjectId2.toString()
+}
+
+export const objectIdInArrayOfAnotherObjectId = (userId: Schema.Types.ObjectId, usersArray: Array<{ _id: Schema.Types.ObjectId }>) => {
+	return usersArray.some((item) => objectIdIsEquals(userId, item._id))
 }
