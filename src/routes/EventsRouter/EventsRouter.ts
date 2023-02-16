@@ -97,10 +97,14 @@ interface GetTaskFiltersErrorReturned {
 }
 
 type GetTaskFiltersScopeReturned = Partial<{ [key in keyof EventModel]: any }>
+type GetTaskDateFiltersReturnedQuery = { [key in string]: any }
+type GetTaskDateFiltersReturned = {
+	startDate: Date,
+	endDate: Date,
+	filter: GetTaskDateFiltersReturnedQuery
+}
 
-export const getTaskFiltersOfScope = async (res: express.Response, user: UserModel, options: Partial<GetTaskAtDayInputValues>): Promise<GetTaskFiltersErrorReturned | GetTaskFiltersScopeReturned> => {
-	const {fromDate, toDate, title, priority, taskStatus, onlyFavorites} = options
-	
+export const getTaskDateFilters = (fromDate: string | Date | undefined, toDate: string | Date | undefined): GetTaskFiltersErrorReturned | GetTaskDateFiltersReturned => {
 	const startDate = dayjs(fromDate)
 	
 	if (!startDate.isValid()) {
@@ -119,18 +123,73 @@ export const getTaskFiltersOfScope = async (res: express.Response, user: UserMod
 		}
 	}
 	
+	return {
+		startDate: startDate.toDate(),
+		endDate: endDate.toDate(),
+		filter: {
+			$or: [
+				{
+					//Кейс когда событие начинается и завершается между startDate и endDate
+					time: {
+						$gte: utcDate(startDate),
+						$lte: utcDate(endDate)
+					},
+					timeEnd: {
+						$gte: utcDate(startDate),
+						$lte: utcDate(endDate)
+					}
+				},
+				{
+					//Кейс когда событие начинается раньше startDate и заканчивается позже endDate
+					time: {
+						$lte: utcDate(startDate)
+					},
+					timeEnd: {
+						$gte: utcDate(endDate)
+					}
+				},
+				{
+					//Кейс когда событие начинается раньше startDate, а заканчивается между startDate и andDate
+					time: {
+						$lte: utcDate(startDate)
+					},
+					timeEnd: {
+						$gte: utcDate(startDate),
+						$lte: utcDate(endDate)
+					}
+				},
+				{
+					//Кейс когда событие начинается между startDate и endDate, а заканчивается позже endDate
+					time: {
+						$gte: utcDate(startDate),
+						$lte: utcDate(endDate)
+					},
+					timeEnd: {
+						$gte: utcDate(endDate)
+					}
+				}
+			],
+		}
+	}
+}
+
+
+export const getTaskFiltersOfScope = async (res: express.Response, user: UserModel, options: Partial<GetTaskAtDayInputValues>): Promise<GetTaskFiltersErrorReturned | GetTaskFiltersScopeReturned> => {
+	const {fromDate, toDate, title, priority, taskStatus, onlyFavorites} = options
+	
+	const dateFilter = getTaskDateFilters(fromDate, toDate)
+	
+	if ('status' in dateFilter) {
+		return dateFilter
+	}
+	
 	const calendars: Array<CalendarsModel> = await Calendars.find({
 		userId: user._id,
 		isSelected: true,
 	})
 	
-	const dateFilter = {
-		$gte: startDate.utc().toDate(),
-		$lte: endDate.utc().toDate()
-	}
-	
 	const filter: Partial<{ [key in keyof EventModel]: any }> = {
-		time: dateFilter,
+		...dateFilter.filter,
 		userId: user._id,
 		calendar: {
 			$in: calendars.map((item) => item._id)
@@ -322,16 +381,16 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({})
+				.status(403)
+				.json({})
 			}
 			
 			const filter = await getTaskFiltersOfScope(res, user, req.body)
 			
 			if ('json' in filter) {
 				return res
-					.status(filter.status)
-					.json(filter.json)
+				.status(filter.status)
+				.json(filter.json)
 			}
 			
 			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
@@ -343,8 +402,8 @@ export const handlers = {
 			
 			if (!eventsFromDB) {
 				return res
-					.status(404)
-					.json({})
+				.status(404)
+				.json({})
 			}
 			
 			const shortEvents = eventsFromDB.map((item) => EventTransformer.shortEventItemResponse(item))
@@ -352,15 +411,15 @@ export const handlers = {
 			const storage = getTaskStorage(shortEvents, req.body.utcOffset)
 			
 			return res
-				.status(200)
-				.json(storage)
+			.status(200)
+			.json(storage)
 			
 			
 		} catch (e) {
 			console.log(e)
 			return res
-				.status(500)
-				.json({})
+			.status(500)
+			.json({})
 		}
 	},
 	async getTaskAtDay(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItemResponse>>) {
@@ -369,39 +428,41 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json([])
+				.status(403)
+				.json([])
 			}
 			
 			const filter = await getTaskFiltersOfScope(res, user, req.body)
 			
 			if ('json' in filter) {
 				return res
-					.status(filter.status)
-					.json(filter.json)
+				.status(filter.status)
+				.json(filter.json)
 			}
 			
-			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
-				sort: {time: 1},
-				populate: [
-					{path: 'calendar'}
-				],
-			})
+			const eventsFromDB: Array<EventModel> | null = await Event.find(filter,
+				{},
+				{
+					sort: {time: 1},
+					populate: [
+						{path: 'calendar'}
+					],
+				})
 			
 			if (eventsFromDB) {
 				return res
-					.status(200)
-					.json(eventsFromDB.map(EventTransformer.shortEventItemResponse))
+				.status(200)
+				.json(eventsFromDB.map(EventTransformer.shortEventItemResponse))
 			}
 			
 			return res
-				.status(404)
-				.json([])
+			.status(404)
+			.json([])
 			
 		} catch (e) {
 			return res
-				.status(500)
-				.json([])
+			.status(500)
+			.json([])
 		}
 	},
 	async getTaskCountOfStatus(req: AuthRequest<Omit<GetTaskAtDayInputValues, 'taskStatus'>>, res: express.Response<{ [key in FilterTaskStatuses]?: number }>) {
@@ -450,10 +511,10 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						message: 'Пользователь не найден'
-					})
+				.status(403)
+				.json({
+					message: 'Пользователь не найден'
+				})
 			}
 			
 			const {id: taskId} = body
@@ -521,17 +582,17 @@ export const handlers = {
 			}
 			
 			return res
-				.status(200)
-				.json({
-					message: 'Событие успешно удалено'
-				})
+			.status(200)
+			.json({
+				message: 'Событие успешно удалено'
+			})
 			
 		} catch (e) {
 			return res
-				.status(500)
-				.json({
-					message: 'При удалении события произошла непредвиденная ошибка'
-				})
+			.status(500)
+			.json({
+				message: 'При удалении события произошла непредвиденная ошибка'
+			})
 		}
 	},
 	async getTaskScheme(req: AuthRequest<GetTaskSchemeInputProps>, res: express.Response<CustomResponseBody<GetTaskSchemeResult>>) {
@@ -539,54 +600,28 @@ export const handlers = {
 			const {user, body} = req
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Не удалось найти пользователя',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Не удалось найти пользователя',
+						type: 'error'
+					}
+				})
 			}
 			
 			const {fromDate, toDate} = body
 			
-			const startDate = dayjs(fromDate)
+			const dateFilter = getTaskDateFilters(fromDate, toDate)
 			
-			if (!startDate.isValid()) {
-				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							message: 'Дата начала схемы событий - невалидна',
-							type: 'error'
-						}
-					})
-			}
-			
-			const endDate = dayjs(toDate)
-			
-			if (!endDate.isValid()) {
-				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							message: 'Дата завершения схемы событий - невалидна',
-							type: 'error'
-						}
-					})
-			}
-			
-			const dateFilter = {
-				$gte: startDate.utc().toDate(),
-				$lte: endDate.utc().toDate()
+			if ("status" in dateFilter) {
+				return res.status(dateFilter.status).json({
+					data: dateFilter.json
+				})
 			}
 			
 			const filters: { [key in keyof EventModel]?: any } = {
-				time: dateFilter,
-				timeEnd: dateFilter,
+				...dateFilter.filter,
 				userId: user._id
 			}
 			
@@ -596,27 +631,43 @@ export const handlers = {
 				let result: GetTaskSchemeResult = {}
 				
 				eventsFromDB.forEach((event) => {
-					const date: string = dayjs(event.time).format('DD-MM-YYYY')
+					const start = dayjs(event.time)
+					const end = dayjs(event.timeEnd)
 					
-					result[date] = true
+					if (start.isSame(end, 'date')) {
+						const date: string = dayjs(event.time).format('DD-MM-YYYY')
+						result[date] = true
+						return
+					}
+					
+					if (start.isAfter(end)) {
+						return
+					}
+					
+					let iterationDate = start
+					
+					while (iterationDate.isSameOrBefore(end, 'date')) {
+						result[iterationDate.format('DD-MM-YYYY')] = true
+						iterationDate = iterationDate.add(1, 'day')
+					}
 				})
 				
 				return res
-					.status(200)
-					.json({
-						data: result,
-					})
+				.status(200)
+				.json({
+					data: result,
+				})
 			}
 			
 			return res
-				.status(200)
-				.json({
-					data: {},
-					info: {
-						message: 'События в данном промежутке дат - не найдены',
-						type: 'warning'
-					}
-				})
+			.status(200)
+			.json({
+				data: {},
+				info: {
+					message: 'События в данном промежутке дат - не найдены',
+					type: 'warning'
+				}
+			})
 			
 		} catch (e) {
 			
@@ -628,28 +679,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Пользователь не найден',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							message: 'На вход ожидался ID события',
-							type: 'error'
-						}
-					})
+				.status(400)
+				.json({
+					data: null,
+					info: {
+						message: 'На вход ожидался ID события',
+						type: 'error'
+					}
+				})
 			}
 			
 			const taskInfo: EventModel | null = await Event.findOne({
@@ -660,14 +711,14 @@ export const handlers = {
 			
 			if (!taskInfo) {
 				return res
-					.status(404)
-					.json({
-						data: null,
-						info: {
-							message: 'Событие не найдено',
-							type: 'warning'
-						}
-					})
+				.status(404)
+				.json({
+					data: null,
+					info: {
+						message: 'Событие не найдено',
+						type: 'warning'
+					}
+				})
 			}
 			
 			
@@ -676,32 +727,32 @@ export const handlers = {
 				&& !objectIdInArrayOfAnotherObjectId(user._id, taskInfo.members)
 			) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							type: 'error',
-							message: "Вы не можете просматривать это событие, так как у вас не хватает прав доступа"
-						}
-					})
-			}
-			
-			return res
-				.status(200)
-				.json({
-					data: EventTransformer.eventItemResponse(taskInfo)
-				})
-			
-		} catch (e) {
-			return res
-				.status(500)
+				.status(403)
 				.json({
 					data: null,
 					info: {
-						message: 'Произошла непредвиденная ошибка',
-						type: 'error'
+						type: 'error',
+						message: "Вы не можете просматривать это событие, так как у вас не хватает прав доступа"
 					}
 				})
+			}
+			
+			return res
+			.status(200)
+			.json({
+				data: EventTransformer.eventItemResponse(taskInfo)
+			})
+			
+		} catch (e) {
+			return res
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка',
+					type: 'error'
+				}
+			})
 		}
 	},
 	async getEventChains(req: AuthRequest<string, { taskId: string }>, res: express.Response<CustomResponseBody<EventChainsObject>>) {
@@ -710,67 +761,67 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Пользователь не найден',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							message: 'На вход ожидался ID события',
-							type: 'error'
-						}
-					})
+				.status(400)
+				.json({
+					data: null,
+					info: {
+						message: 'На вход ожидался ID события',
+						type: 'error'
+					}
+				})
 			}
 			
 			const taskInfo: EventModelWithPopulateChildOf | null = await Event.findOne({
 				_id: params.taskId
 			})
-				.populate(['childOf', 'parentId', 'linkedFrom'])
+			.populate(['childOf', 'parentId', 'linkedFrom'])
 			
 			if (!taskInfo) {
 				return res
-					.status(404)
-					.json({
-						data: null,
-						info: {
-							message: 'Событие не найдено',
-							type: 'warning'
-						}
-					})
-			}
-			
-			return res
-				.status(200)
-				.json({
-					data: {
-						childrenEvents: taskInfo.childOf.length ? taskInfo.childOf.map(EventTransformer.eventItemResponse) : null,
-						parentEvent: taskInfo.parentId ? EventTransformer.eventItemResponse(taskInfo.parentId) : null,
-						linkedFromEvent: taskInfo.linkedFrom ? EventTransformer.eventItemResponse(taskInfo.linkedFrom) : null
-					}
-				})
-			
-		} catch (e) {
-			return res
-				.status(500)
+				.status(404)
 				.json({
 					data: null,
 					info: {
-						message: 'Произошла непредвиденная ошибка',
-						type: 'error'
+						message: 'Событие не найдено',
+						type: 'warning'
 					}
 				})
+			}
+			
+			return res
+			.status(200)
+			.json({
+				data: {
+					childrenEvents: taskInfo.childOf.length ? taskInfo.childOf.map(EventTransformer.eventItemResponse) : null,
+					parentEvent: taskInfo.parentId ? EventTransformer.eventItemResponse(taskInfo.parentId) : null,
+					linkedFromEvent: taskInfo.linkedFrom ? EventTransformer.eventItemResponse(taskInfo.linkedFrom) : null
+				}
+			})
+			
+		} catch (e) {
+			return res
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Произошла непредвиденная ошибка',
+					type: 'error'
+				}
+			})
 		}
 	},
 	async updateTaskInfo(req: AuthRequest<UpdateTaskTypes>, res: express.Response<CustomResponseBody<null>>) {
@@ -780,14 +831,14 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Пользователь не найден',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
 			}
 			
 			const hasData = !!body.data || body.data === null || body.data === false
@@ -1198,14 +1249,14 @@ export const handlers = {
 			
 			if (!calendar) {
 				return res
-					.status(404)
-					.json({
-						data: null,
-						info: {
-							type: 'error',
-							message: 'Не удалось изменить календарь, так как он не найден'
-						}
-					})
+				.status(404)
+				.json({
+					data: null,
+					info: {
+						type: 'error',
+						message: 'Не удалось изменить календарь, так как он не найден'
+					}
+				})
 			}
 			if (calendar.title === title && calendar.color === color) {
 				return res.status(200).json({
@@ -1253,13 +1304,13 @@ export const handlers = {
 			})
 			
 			return res.status(200)
-				.json({
-					data: null,
-					info: {
-						type: 'success',
-						message: 'Успешно обновлено'
-					}
-				})
+			.json({
+				data: null,
+				info: {
+					type: 'success',
+					message: 'Успешно обновлено'
+				}
+			})
 			
 		} catch (e) {
 			console.log(e)
@@ -1278,28 +1329,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Пользователь не найден',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Пользователь не найден',
+						type: 'error'
+					}
+				})
 			}
 			
 			console.log(user, params)
 			
 			if (!params.taskId) {
 				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							message: 'На вход ожидался ID события',
-							type: 'error'
-						}
-					})
+				.status(400)
+				.json({
+					data: null,
+					info: {
+						message: 'На вход ожидался ID события',
+						type: 'error'
+					}
+				})
 			}
 			
 			const historyListFromDb: Array<EventHistoryPopulatedItem> | null = await EventHistory.find(
@@ -1333,14 +1384,14 @@ export const handlers = {
 			
 		} catch (e) {
 			return res
-				.status(500)
-				.json({
-					data: null,
-					info: {
-						message: 'Не удалось получить историю события',
-						type: 'error'
-					}
-				})
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Не удалось получить историю события',
+					type: 'error'
+				}
+			})
 		}
 	},
 	async getEventCommentList(req: AuthRequest<null, { taskId?: string }>, res: express.Response<CustomResponseBody<Array<CommentModel>>>) {
@@ -1349,28 +1400,28 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Не удалось проверить сессию текущего пользователя',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Не удалось проверить сессию текущего пользователя',
+						type: 'error'
+					}
+				})
 			}
 			
 			const {taskId} = params
 			
 			if (!taskId) {
 				return res
-					.status(400)
-					.json({
-						data: null,
-						info: {
-							type: "warning",
-							message: "TaskId is undefined or not correct"
-						}
-					})
+				.status(400)
+				.json({
+					data: null,
+					info: {
+						type: "warning",
+						message: "TaskId is undefined or not correct"
+					}
+				})
 			}
 			
 			const task: EventModel | null = await Event.findOne({
@@ -1380,11 +1431,11 @@ export const handlers = {
 			
 			if (!task) {
 				return res
-					.status(404)
-					.json({
-						data: null,
-						info: {type: "error", message: "Событие не найдено"}
-					})
+				.status(404)
+				.json({
+					data: null,
+					info: {type: "error", message: "Событие не найдено"}
+				})
 			}
 			
 			if (
@@ -1392,11 +1443,11 @@ export const handlers = {
 				&& !objectIdInArrayOfAnotherObjectId(user._id, task.members)
 			) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {type: "error", message: "Вы не можете просматривать комментарии к этому событию"}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {type: "error", message: "Вы не можете просматривать комментарии к этому событию"}
+				})
 			}
 			
 			const comments: Array<CommentModel> | null = await Comment.find(
@@ -1407,11 +1458,11 @@ export const handlers = {
 			
 			if (!comments) {
 				return res
-					.status(500)
-					.json({
-						data: null,
-						info: {type: 'info', message: "Комментарии не найдены"}
-					})
+				.status(500)
+				.json({
+					data: null,
+					info: {type: 'info', message: "Комментарии не найдены"}
+				})
 			}
 			
 			return res.status(200).json({
@@ -1421,14 +1472,14 @@ export const handlers = {
 		} catch (e) {
 			console.error(e)
 			return res
-				.status(500)
-				.json({
-					data: null,
-					info: {
-						message: 'Произошла ошибка, мы уже работаем над этим',
-						type: 'error'
-					}
-				})
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Произошла ошибка, мы уже работаем над этим',
+					type: 'error'
+				}
+			})
 		}
 		
 	},
@@ -1438,14 +1489,14 @@ export const handlers = {
 			
 			if (!user) {
 				return res
-					.status(403)
-					.json({
-						data: null,
-						info: {
-							message: 'Не удалось проверить сессию текущего пользователя',
-							type: 'error'
-						}
-					})
+				.status(403)
+				.json({
+					data: null,
+					info: {
+						message: 'Не удалось проверить сессию текущего пользователя',
+						type: 'error'
+					}
+				})
 			}
 			
 			
@@ -1488,14 +1539,14 @@ export const handlers = {
 			
 		} catch (e) {
 			return res
-				.status(500)
-				.json({
-					data: null,
-					info: {
-						message: 'Не удалось сохранить комментарий',
-						type: 'error'
-					}
-				})
+			.status(500)
+			.json({
+				data: null,
+				info: {
+					message: 'Не удалось сохранить комментарий',
+					type: 'error'
+				}
+			})
 		}
 	},
 	async removeEventComment(req: AuthRequest<{ commentId?: string }, null>, res: express.Response<CustomResponseBody<null>>) {
