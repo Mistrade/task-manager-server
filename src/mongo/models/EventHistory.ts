@@ -26,8 +26,12 @@ export interface EventHistoryPopulatedItem {
 	eventSnapshot: EventModelWithPopulateChildOf,
 }
 
+interface EventSnapshot extends Omit<FullResponseEventModel, 'calendar'> {
+	calendar: FullResponseEventModel['calendar'] | null
+}
+
 export interface EventHistoryResponseItem extends Omit<EventHistoryPopulatedItem, 'eventSnapshot'> {
-	eventSnapshot: FullResponseEventModel
+	eventSnapshot: EventSnapshot
 }
 
 const EventHistorySchema = new Schema({

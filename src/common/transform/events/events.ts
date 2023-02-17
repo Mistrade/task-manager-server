@@ -8,7 +8,7 @@ import {utcString} from "../../common";
 
 interface TransformerObject {
 	eventItemResponse: (this: TransformerObject, event: EventModel) => FullResponseEventModel,
-	calendarItemResponse: (this: TransformerObject, data: CalendarsModel) => CalendarResponse,
+	calendarItemResponse: (this: TransformerObject, data: CalendarsModel | null) => CalendarResponse | null,
 	// historyItemResponse: (this: TransformerObject, data: EventHistoryItem) => EventHistoryResponse,
 	shortEventItemResponse: (this: TransformerObject, data: EventModel) => ShortEventItemResponse,
 	// historyItemDb: (this: TransformerObject, data: EventHistoryItem) => DbEventHistoryItem,
@@ -39,6 +39,7 @@ export const EventTransformer: TransformerObject = {
 		}
 	},
 	calendarItemResponse(data) {
+		if (!data) return null
 		return {
 			editable: data.editable,
 			created: dayjs(data.created).utc().toString(),

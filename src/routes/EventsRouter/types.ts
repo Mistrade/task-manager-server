@@ -71,7 +71,8 @@ export type SystemUpdateTaskTypes = UpdateTaskTypes | UpdateTaskCreatedAt
 
 export interface RequestCommentAddProps {
 	message: string,
-	eventId: Schema.Types.ObjectId
+	eventId: Schema.Types.ObjectId,
+	sourceCommentId?: Schema.Types.ObjectId | null
 }
 
 export interface EventChainsObject {

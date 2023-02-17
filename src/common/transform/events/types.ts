@@ -36,9 +36,12 @@ export interface FullResponseEventModel {
 	type: string,
 	userId: UserModelResponse,
 	lastChange: UtcDate,
-	calendar: CalendarResponse,
+	calendar: CalendarResponse | null,
 	isLiked: boolean,
-	childOf: Array<Schema.Types.ObjectId>
+	childOf: Array<Schema.Types.ObjectId>,
+	chainsCount?: number,
+	commentsCount?: number,
+	historyItemsCount?: number
 }
 
 export type ShortEventItemResponseWithoutUserId = Pick<FullResponseEventModel, 'title' | 'time' | 'timeEnd' | 'link' | 'id' | 'priority' | 'description' | 'status' | 'calendar' | 'isLiked'>

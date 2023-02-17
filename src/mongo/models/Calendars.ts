@@ -22,6 +22,7 @@ const CalendarsSchema = new Schema({
 	userId: {
 		type: Schema.Types.ObjectId,
 		ref: 'User',
+		required: true,
 		autopopulate: true,
 		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
 	},

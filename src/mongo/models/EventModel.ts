@@ -36,7 +36,7 @@ export interface DbEventModel {
 	type: string,
 	userId: Schema.Types.ObjectId,
 	lastChange: Date,
-	calendar: Schema.Types.ObjectId,
+	calendar: Schema.Types.ObjectId | null,
 	isLiked: boolean,
 	childOf: Array<Schema.Types.ObjectId>
 }
@@ -44,7 +44,7 @@ export interface DbEventModel {
 export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'calendar'> {
 	members: Array<UserModelResponse>,
 	userId: UserModelResponse,
-	calendar: CalendarsModel,
+	calendar: CalendarsModel | null,
 }
 
 export interface EventModelWithPopulateChildOf extends Omit<EventModel, 'childOf' | 'linkedFrom' | 'parentId'> {

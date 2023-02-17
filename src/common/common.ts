@@ -390,7 +390,7 @@ export const eventSnapshot = (event: EventModel, changed: Date): DbEventModel =>
 	return {
 		...event,
 		userId: event.userId._id,
-		calendar: event.calendar._id,
+		calendar: event.calendar?._id || null,
 		lastChange: changed,
 		members: event.members.map((item) => item._id),
 	}

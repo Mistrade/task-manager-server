@@ -6,18 +6,21 @@ import * as mongoose from "mongoose";
 import {UserModelResponse} from "../../common/transform/session/types";
 import autopopulate from "mongoose-autopopulate";
 
-export interface CommentSchema {
+export interface CommentSchemaType {
 	eventId: Schema.Types.ObjectId,
 	userId: Schema.Types.ObjectId,
-	date: Date,
-	message: string
+	date?: Date,
+	message: string,
+	sourceComment?: null | Schema.Types.ObjectId
 }
 
 export interface CommentModel {
+	_id: Schema.Types.ObjectId,
 	eventId: Schema.Types.ObjectId,
 	userId: UserModelResponse,
 	date: Date,
-	message: string
+	message: string,
+	sourceComment?: CommentModel | null
 }
 
 export const CommentSchema = new Schema({
@@ -29,10 +32,11 @@ export const CommentSchema = new Schema({
 		ref: "User",
 		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
 	},
+	sourceComment: {type: Schema.Types.ObjectId, ref: "Comment", autopopulate: true, default: null},
 	date: {type: Date, required: true, default: () => utcDate()},
 	message: {type: String, required: true, maxLength: 3000},
 })
 
 CommentSchema.plugin(autopopulate)
 
-export const Comment = mongoose.model('Comment', CommentSchema)
+export const Comment = mongoose.model<CommentModel>('Comment', CommentSchema)
