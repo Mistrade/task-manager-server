@@ -4,7 +4,7 @@ import {Comment, CommentModel} from "../../mongo/models/Comment";
 import {EventHistory, EventHistoryPopulatedItem} from "../../mongo/models/EventHistory";
 
 export const getChainsCount = (task: EventModelType): number => {
-	return (task.parentId ? 1 : 0) + (task.linkedFrom ? 1 : 0) + (task.childOf.length || 0)
+	return (task.parentId ? 1 : 0) + (task.linkedFrom ? 1 : 0)
 }
 
 export const getCommentsCount = async (taskId: Schema.Types.ObjectId): Promise<number> => {

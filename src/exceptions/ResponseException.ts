@@ -1,4 +1,4 @@
-import {CustomResponseBody, ErrorTypes, ResponseReturned} from "../EventsRouter/EventsRouter";
+import {CustomResponseBody, ErrorTypes, ResponseReturned} from "../routes/PlanningsRouter";
 
 export class ResponseException<T extends any = any> {
 	public status: number;
@@ -19,7 +19,7 @@ export class ResponseException<T extends any = any> {
 		}
 	}
 	
-	public static createSuccessObject<T extends any = any>(data: T): ResponseException<T> {
+	public static createSuccessObject<T extends object | null = any>(data: T): ResponseException<T> {
 		return {
 			status: 200,
 			json: {

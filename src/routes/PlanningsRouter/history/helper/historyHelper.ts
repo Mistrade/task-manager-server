@@ -3,14 +3,19 @@ import {SessionHandler} from "../../../SessionRouter/SessionHandler";
 import {Schema} from "mongoose";
 import {ResponseException} from "../../../../exceptions/ResponseException";
 import {
+	CreateSnapshotDefaultFields,
 	EventHistory,
 	EventHistoryArrayToCreate,
 	EventHistoryCreateType,
 	EventHistoryEditableFieldNames,
 	EventHistoryQueryResult,
-	EventHistoryQuerySnapshot
+	EventHistoryQuerySnapshot, EventHistoryRequiredFields, EventHistorySnapshot, EventSnapshotCreateOptionalType
 } from "../../../../mongo/models/EventHistory";
 import {utcDate} from "../../../../common/common";
+import {EventHelper} from "../../events/helpers/eventHelper";
+import {EventModelType} from "../../../../mongo/models/EventModel";
+import {HistoryDescription} from "../../../../common/constants";
+import {BuildHistoryItemOptions} from "../types";
 
 export type AnyObject = {
 	[key in string]: any
@@ -41,31 +46,22 @@ export class HistoryHelper {
 			type: instance.type || "",
 			time: instance.time || null,
 			timeEnd: instance.timeEnd || null,
-			calendar: instance.calendar || null,
+			group: instance.group || null,
 			insertChildOfEvents: instance.insertChildOfEvents || [],
 			removeChildOfEvents: instance.removeChildOfEvents || [],
 			parentEvent: instance.parentEvent || null,
 			linkedFrom: instance.linkedFrom || null,
-			insertMembers: instance.insertMembers || [],
-			removeMembers: instance.removeMembers || [],
+			sendInvites: instance.sendInvites || [], //TODO Доработать отдачу юзера, возвращается пароль
+			closeInvites: instance.closeInvites || [],
 			isLiked: !!instance.isLiked,
 			link: instance.link || null,
-		}
-	}
-	
-	//Метод, проверяющий наличие и корректность eventId, если он некорректный - будет выброшено исключение
-	private checkEventId(eventId?: Schema.Types.ObjectId): void {
-		if (!eventId) {
-			throw new ResponseException(
-				ResponseException.createObject(400, 'error', 'Некорректное значение параметра eventId')
-			)
 		}
 	}
 	
 	//Метод, возвращающий количество записей в хранилище истории по eventId
 	public async getHistoryCount(eventId: Schema.Types.ObjectId, filters?: AnyObject): Promise<{ result: number } & HistoryHelper> {
 		
-		this.checkEventId(eventId)
+		EventHelper.checkEventId(eventId)
 		
 		const count: number = await EventHistory.count({
 			eventId,
@@ -78,44 +74,60 @@ export class HistoryHelper {
 		}
 	}
 	
+	public buildResultHistoryItem(item: EventHistoryQueryResult): EventHistoryQueryResult {
+		return {
+			date: item.date,
+			eventId: item.eventId || null,
+			changeUserId: item.changeUserId,
+			fieldName: item.fieldName,
+			snapshotDescription: item.snapshotDescription,
+			eventSnapshot: HistoryHelper.sortOutSnapshot(item.eventSnapshot),
+			isPrivate: item.isPrivate
+		}
+	}
+	
 	//Метод, возвращающей массив записей в истории по eventId
 	public async getHistoryListByEventId(
-		eventId?: Schema.Types.ObjectId,
+		eventId: Schema.Types.ObjectId,
 		filters?: AnyObject
-	): Promise<HistoryHelper & { result: Array<EventHistoryQueryResult> }> {
+	): Promise<Array<EventHistoryQueryResult>> {
 		
-		this.checkEventId(eventId)
+		EventHelper.checkEventId(eventId)
+		
+		const eventApi = new EventHelper(this.user)
+		const event = await eventApi.getEvent({
+			_id: eventId
+		})
+		
+		await eventApi.checkUserRootsInEvent(
+			event,
+			'editor',
+			'none',
+			'Недостаточно прав доступа для просмотра истории этого события'
+		)
 		
 		const eventHistoryList: Array<EventHistoryQueryResult> | null = await EventHistory.find({
 			eventId,
+			$or: [
+				{isPrivate: true, changeUserId: this.user._id},
+				{isPrivate: false}
+			],
 			...(filters || {})
 		})
 		
-		const result: Array<EventHistoryQueryResult> = eventHistoryList?.map((note): EventHistoryQueryResult => {
-			return {
-				date: note.date,
-				eventId: note.eventId || null,
-				changeUserId: note.changeUserId,
-				fieldName: note.fieldName,
-				snapshotDescription: note.snapshotDescription,
-				eventSnapshot: HistoryHelper.sortOutSnapshot(note.eventSnapshot)
-			}
-		}) || []
-		
-		return {
-			...this,
-			result
-		}
+		return eventHistoryList?.map(this.buildResultHistoryItem) || []
 	}
 	
 	public async addToHistory<FieldNames extends EventHistoryEditableFieldNames>(
 		arr: EventHistoryArrayToCreate<FieldNames>
 	): Promise<HistoryHelper> {
-		if (!Array.isArray(arr) || arr.length === 0) {
+		if (!Array.isArray(arr)) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'error', 'Объектов для добавления в историю событий не получено')
 			)
 		}
+		
+		if (arr.length === 0) return this
 		
 		const data: Array<EventHistoryCreateType<FieldNames>> = arr.map((item) => ({
 			...item,
@@ -123,11 +135,9 @@ export class HistoryHelper {
 			date: utcDate()
 		}))
 		
-		const insertResult = await EventHistory.insertMany(data)
-		
-		console.log(insertResult)
-		
-		if (!insertResult) {
+		try {
+			await EventHistory.insertMany(data)
+		} catch (e) {
 			throw new ResponseException(
 				ResponseException.createObject(500, 'error', 'Не удалось записать изменения в хранилище истории')
 			)
@@ -136,11 +146,21 @@ export class HistoryHelper {
 		return this
 	}
 	
-	public async removeHistoryByEventId(eventId: Schema.Types.ObjectId, additionalFilters?: AnyObject): Promise<HistoryHelper> {
-		this.checkEventId(eventId)
+	public async removeHistoryByEventId(events: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>, additionalFilters?: AnyObject): Promise<HistoryHelper> {
+		const filters: AnyObject = {}
 		
-		await EventHistory.remove({
-			eventId,
+		if (Array.isArray(events)) {
+			events = events.filter((eventId) => !!eventId)
+			filters.eventId = {
+				$in: events
+			}
+		} else {
+			EventHelper.checkEventId(events)
+			filters.eventId = events
+		}
+		
+		await EventHistory.deleteMany({
+			...filters,
 			...additionalFilters,
 		})
 			.catch((reason) => {
@@ -153,5 +173,53 @@ export class HistoryHelper {
 		return this
 	}
 	
+	public getSnapshotRequiredFields(event: EventModelType): EventHistoryRequiredFields {
+		return {
+			priority: event.priority,
+			status: event.status,
+			title: event.title,
+			originalEventId: event._id,
+			createdAt: utcDate(),
+			user: this.user._id
+		}
+	}
 	
+	public getSnapshotOptionalFields(): Required<EventSnapshotCreateOptionalType> {
+		return {
+			group: null,
+			description: "",
+			time: null,
+			timeEnd: null,
+			sendInvites: [],
+			insertChildOfEvents: [],
+			closeInvites: [],
+			removeChildOfEvents: [],
+			parentEvent: null,
+			linkedFrom: null,
+			link: null,
+			isLiked: null,
+			type: null,
+		}
+	}
+	
+	public buildHistoryItem<FieldName extends EventHistoryEditableFieldNames>(
+		fieldName: FieldName,
+		event: EventModelType,
+		data: Required<Pick<EventHistorySnapshot<FieldName>, FieldName>>,
+		options?: BuildHistoryItemOptions
+	): EventHistoryCreateType<EventHistoryEditableFieldNames> {
+		return {
+			date: utcDate(),
+			changeUserId: this.user._id,
+			eventId: event._id,
+			fieldName,
+			snapshotDescription: options?.customDescription || HistoryDescription[fieldName],
+			eventSnapshot: {
+				...this.getSnapshotRequiredFields(event),
+				...this.getSnapshotOptionalFields(),
+				...data
+			},
+			isPrivate: options?.isPrivate || false
+		}
+	}
 }

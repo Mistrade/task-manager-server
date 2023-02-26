@@ -1,42 +1,40 @@
-import {DbEventModel, EventModel} from "../mongo/models/EventModel";
+import {DbEventModel, EventModelType} from "../mongo/models/EventModel";
 import dayjs, {Dayjs} from "dayjs";
-import {UpdateTaskTypes} from "../routes/EventsRouter/types";
 import {UserModel} from "../mongo/models/User";
-import {Calendars, CalendarsModel} from "../mongo/models/Calendars";
+import {GroupModel, GroupsModelType} from "../mongo/models/Group";
 import {ShortEventItemResponse} from "./transform/events/types";
 import {Schema} from "mongoose";
+import {UserModelResponse} from "./transform/session/types";
+import {UpdateEventMapTypes} from "../routes/PlanningsRouter/info/types";
 
 export type HistoryDescriptionObject = {
-	[key in keyof EventModel]: string
+	[key in keyof Omit<EventModelType, 'updatedAt'>]: string
 }
 
 export const HistoryDescription: HistoryDescriptionObject = {
 	_id: 'Изменен ID события',
-	calendar: 'Изменен календарь события',
+	group: 'Изменен календарь события',
 	createdAt: 'Событие создано',
 	status: 'Изменен статус события', //+
 	priority: 'Изменен приоритет события', //+
 	description: 'Изменено описание события', //+
 	timeEnd: 'Изменена дата завершения события', //+
 	time: 'Изменена дата начала события', //+
-	lastChange: 'Изменена дата последнего редактирования события',
 	link: 'Изменена ссылка для подключения к событию', //+
 	linkedFrom: 'Событие было клонировано от другого события',
 	title: 'Изменен заголовок события', //+
 	type: 'Изменен тип события',
 	userId: 'Изменен владелец события',
-	members: 'Добавлен(-ы) участник(-и) события', //+
-	isLiked: 'Добавлено/Удалено в(из) избранно(е|го)',
-	childOf: "123"
+	likedUsers: 'Добавлено/Удалено в(из) избранно(е|го)',
+	invites: "",
 }
 
-export const UpdateTaskDescription: { [key in UpdateTaskTypes['field']]: string } = {
+export const UpdateTaskDescription: { [key in UpdateEventMapTypes['field']]: string } = {
 	status: "Изменен статус",
-	calendar: "Изменен календарь",
+	group: "Изменен календарь",
 	description: "Изменено описание",
 	priority: "Изменен приоритет",
 	link: "Изменена ссылка для подключения",
-	members: "Изменен список участников",
 	time: "Изменено время начала",
 	timeEnd: "Изменено время завершения",
 	title: "Изменено название (заголовок)",
@@ -126,20 +124,19 @@ export const UpdateTaskDescription: { [key in UpdateTaskTypes['field']]: string 
 // }
 
 export type UpdateTaskInfoReturn = {
-	[key in keyof EventModel]?: DbEventModel[key]
+	[key in keyof EventModelType]?: DbEventModel[key]
 }
 
-export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user: UserModel): UpdateTaskInfoReturn | string => {
-	const fieldsForUpdates: { [key in UpdateTaskTypes['field']]: boolean } = {
+export const UpdateTaskInfo = (taskItem: EventModelType, body: UpdateEventMapTypes, user: UserModelResponse): UpdateTaskInfoReturn | string => {
+	const fieldsForUpdates: { [key in UpdateEventMapTypes['field']]: boolean } = {
 		status: true,
 		priority: true,
 		description: true,
 		time: true,
 		timeEnd: true,
 		title: true,
-		members: true,
 		link: true,
-		calendar: true,
+		group: true,
 		isLiked: true,
 	}
 	
@@ -157,15 +154,15 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 			}
 			
 			return {
-				isLiked: data
+				likedUsers: []
 			}
-		case 'calendar':
+		case 'group':
 			if (typeof data !== 'string') {
 				return 'Ожидался идентификатор календаря'
 			}
 			
 			return {
-				calendar: data
+				group: data
 			}
 		case "title":
 			if (typeof data !== 'string') {
@@ -196,9 +193,9 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 			return {
 				link: data
 			}
-		case "members":
+		// case "members":
 			// taskItem.members.push(data)
-			return 'MEMBERS NOT CHANGED'
+			// return 'MEMBERS NOT CHANGED'
 		case "timeEnd":
 			const endTime = dayjs(data)
 			if (typeof data !== 'string' || !endTime.isValid()) {
@@ -246,11 +243,11 @@ export const UpdateTaskInfo = (taskItem: EventModel, body: UpdateTaskTypes, user
 	}
 }
 
-export const createBaseCalendars = async (user: UserModel) => {
+export const createBaseCalendars = async (user: UserModelResponse | UserModel) => {
 	try {
-		const homeCalendar: CalendarsModel = await Calendars.create({
+		const homeCalendar: GroupsModelType = await GroupModel.create({
 			userId: user._id,
-			title: 'Домашний календарь',
+			title: 'Домашние дела',
 			isSelected: true,
 			editable: true,
 			deletable: false,
@@ -258,16 +255,16 @@ export const createBaseCalendars = async (user: UserModel) => {
 			type: 'Main'
 		})
 		
-		const workCalendar: CalendarsModel = await Calendars.create({
+		const workCalendar: GroupsModelType = await GroupModel.create({
 			userId: user._id,
-			title: 'Рабочий календарь',
+			title: 'Рабочие дела',
 			isSelected: true,
 			editable: true,
 			deletable: true,
 			color: '#FFA4A4'
 		})
 		
-		const invitedCalendar: CalendarsModel = await Calendars.create({
+		const invitedCalendar: GroupsModelType = await GroupModel.create({
 			userId: user._id,
 			title: 'Приглашения',
 			isSelected: true,
@@ -283,16 +280,15 @@ export const createBaseCalendars = async (user: UserModel) => {
 	}
 }
 
-export const utcString = (date?: Date | dayjs.Dayjs): string => {
+export const utcString = (date?: Date | dayjs.Dayjs | string): string => {
 	return date ? dayjs(date).utc().toString() : dayjs().utc().toString()
 }
 
-export const utcDate = (date?: Date | dayjs.Dayjs): Date => {
+export const utcDate = (date?: Date | dayjs.Dayjs | string): Date => {
 	return date ? dayjs(date).utc().toDate() : dayjs().utc().toDate()
 }
 
 export type CustomObject<T = any> = { [key in string]: T }
-export type PartialCustomObject<T = any> = Partial<{ [key in string]: T }>
 
 export type TaskStorage = CustomObject<TaskYear>
 export type TaskYear = CustomObject<TaskMonth>
@@ -321,7 +317,6 @@ export const setTaskAtDay = (storage: TaskStorage, storageDate: Date, event: Sho
 	const day = addUtcOffset(storageDate)
 	
 	const y: number = day.year()
-	
 	const m: number = day.month()
 	const d: number = day.date()
 	
@@ -386,13 +381,12 @@ export const getTaskStorage = (tasks: Array<ShortEventItemResponse>, utcOffset: 
 	return r || {}
 }
 
-export const eventSnapshot = (event: EventModel, changed: Date): DbEventModel => {
+export const eventSnapshot = (event: EventModelType, changed: Date): DbEventModel => {
 	return {
 		...event,
 		userId: event.userId._id,
-		calendar: event.calendar?._id || null,
-		lastChange: changed,
-		members: event.members.map((item) => item._id),
+		group: event.group?._id || null,
+		invites: []
 	}
 }
 
@@ -400,6 +394,12 @@ export const objectIdIsEquals = (userObjectId1: Schema.Types.ObjectId, userObjec
 	return userObjectId1.toString() === userObjectId2.toString()
 }
 
-export const objectIdInArrayOfAnotherObjectId = (userId: Schema.Types.ObjectId, usersArray: Array<{ _id: Schema.Types.ObjectId }>) => {
-	return usersArray.some((item) => objectIdIsEquals(userId, item._id))
+export const objectIdInArrayOfAnotherObjectId = (userId: Schema.Types.ObjectId, usersArray: Array<{ _id: Schema.Types.ObjectId } | Schema.Types.ObjectId>) => {
+	return usersArray.some((item) => {
+		if ('_id' in item) {
+			return objectIdIsEquals(userId, item._id)
+			
+		}
+		return objectIdIsEquals(userId, item)
+	})
 }

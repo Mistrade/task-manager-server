@@ -8,7 +8,7 @@ import JWT from 'jsonwebtoken'
 import {Schema} from "mongoose";
 import {Config} from "../../config/config";
 import {Session} from "../../mongo/models/Session";
-import {CustomResponseBody} from "../EventsRouter/EventsRouter";
+import {CustomResponseBody} from "../PlanningsRouter";
 import {createBaseCalendars} from "../../common/common";
 
 const route = express.Router()

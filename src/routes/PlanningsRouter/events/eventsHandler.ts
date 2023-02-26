@@ -1,7 +1,8 @@
-import {EventHandler_Create_Response, EventHandlerObject} from "./types";
+import {ByEventIdType, EventHandlerObject} from "./types";
 import {CatchErrorHandler, ResponseException} from "../../../exceptions/ResponseException";
 import {SessionHandler} from "../../SessionRouter/SessionHandler";
 import {EventHelper} from "./helpers/eventHelper";
+import {createBaseCalendars} from "../../../common/common";
 
 
 export const EventsHandler: EventHandlerObject = {
@@ -22,8 +23,8 @@ export const EventsHandler: EventHandlerObject = {
 			
 			//После генерирую успешный объект для отправки
 			const r = new ResponseException(
-				ResponseException.createSuccessObject<EventHandler_Create_Response>(
-					{taskId: createdEvent._id}
+				ResponseException.createSuccessObject<ByEventIdType>(
+					{eventId: createdEvent._id}
 				)
 			)
 			
@@ -44,7 +45,25 @@ export const EventsHandler: EventHandlerObject = {
 	},
 	async remove(req, res) {
 		try {
-		
+			
+			const {user, body} = req
+			
+			const eventHelper = new EventHelper(user)
+			const removeResult = await eventHelper.remove({
+				_id: body.eventId
+			})
+			
+			if (!removeResult.result) {
+				throw new ResponseException(
+					ResponseException.createObject(500, 'error', 'Не удалось полностью выполнить процедуру удаления события')
+				)
+			}
+			
+			const result = new ResponseException(
+				ResponseException.createSuccessObject(null)
+			)
+			
+			return res.status(result.status).json(result.json)
 		} catch (e) {
 			console.error('error in /events/remove', e)
 			const result = CatchErrorHandler(e)

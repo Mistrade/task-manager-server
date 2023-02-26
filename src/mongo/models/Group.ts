@@ -5,25 +5,24 @@ import dayjs from "dayjs";
 import {UserModelHelper} from "../helpers/User";
 import {UserModelResponse} from "../../common/transform/session/types";
 
-export type CalendarsModelType = 'Invite' | 'Custom' | 'Main'
+export type GroupUniqueTypes = 'Invite' | 'Main'
+export type GroupItemType = 'Custom' | GroupUniqueTypes
 
-export interface CalendarsModel {
+export interface GroupsModelType<T extends UserModel | UserModelResponse | Schema.Types.ObjectId = UserModel> {
 	_id: Schema.Types.ObjectId,
-	userId: UserModel,
+	userId: T,
 	created: Date,
 	isSelected: boolean,
 	title: string,
 	editable: boolean,
 	color: string,
 	deletable: boolean,
-	type: CalendarsModelType
+	type: GroupItemType
 }
 
-export interface CalendarsModelResponse extends Omit<CalendarsModel, 'userId'> {
-	userId: UserModelResponse
-}
+export type GroupsModelResponse = GroupsModelType<UserModelResponse>
 
-const CalendarsSchema = new Schema({
+const GroupsSchema = new Schema({
 	userId: {
 		type: Schema.Types.ObjectId,
 		ref: 'User',
@@ -40,6 +39,6 @@ const CalendarsSchema = new Schema({
 	type: {type: String, default: 'Custom', required: true, of: ['Invite', 'Custom', 'Main']}
 })
 
-CalendarsSchema.plugin(autopopulate)
+GroupsSchema.plugin(autopopulate)
 
-export const Calendars = model<CalendarsModel>('Calendar', CalendarsSchema)
+export const GroupModel = model<GroupsModelType>('Group', GroupsSchema)

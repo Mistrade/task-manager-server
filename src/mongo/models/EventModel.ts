@@ -1,17 +1,19 @@
 import {model, Schema} from "mongoose";
 import {User, UserModel} from "./User";
 import autopopulate from "mongoose-autopopulate";
-import {CalendarsModel} from "./Calendars";
+import {GroupsModelType} from "./Group";
 import {UserModelHelper} from "../helpers/User";
 import {UserModelResponse} from "../../common/transform/session/types";
+import {DbTaskPriorities, DbTaskStatuses} from "../../common/constants";
+import {EventInviteQueryType} from "./EventInvite";
 
-export type CalendarPriorityKeys =
-	'veryLow'
+export type PriorityKeys = 'veryLow'
 	| 'low'
 	| 'medium'
 	| 'high'
 	| 'veryHigh'
-	| 'not_selected'
+
+export type CalendarPriorityKeys = PriorityKeys | 'not_selected'
 
 export type TaskStatusesType = 'completed' | 'created' | 'in_progress' | 'review' | 'archive'
 
@@ -20,61 +22,63 @@ export interface EventLinkItem {
 	value: string
 }
 
-export interface DbEventModel {
+export interface DbEventChildOfItemSchemaType<T = Schema.Types.ObjectId> {
+	event: T,
 	_id: Schema.Types.ObjectId,
 	createdAt: Date,
+}
+
+export interface DbEventModel {
+	_id: Schema.Types.ObjectId,
 	description: string,
 	link: EventLinkItem | null,
 	linkedFrom?: Schema.Types.ObjectId,
 	parentId?: Schema.Types.ObjectId
-	members: Array<Schema.Types.ObjectId>,
-	priority: CalendarPriorityKeys,
+	priority: PriorityKeys,
 	status: TaskStatusesType,
 	time: Date,
 	timeEnd: Date,
 	title: string,
 	type: string,
 	userId: Schema.Types.ObjectId,
-	lastChange: Date,
-	calendar: Schema.Types.ObjectId | null,
-	isLiked: boolean,
-	childOf: Array<Schema.Types.ObjectId>
+	group: Schema.Types.ObjectId | null,
+	likedUsers: Array<Schema.Types.ObjectId>,
+	createdAt: Date,
+	updatedAt: Date,
+	invites: Array<EventModelInvitesObject>
 }
 
-export interface EventModel extends Omit<DbEventModel, 'members' | 'userId' | 'calendar'> {
-	members: Array<UserModelResponse>,
-	userId: UserModelResponse,
-	calendar: CalendarsModel | null,
+export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
+	userId: Schema.Types.ObjectId,
+	inviteId: InviteType | null
 }
 
-export interface EventModelWithPopulateChildOf extends Omit<EventModel, 'childOf' | 'linkedFrom' | 'parentId'> {
-	childOf: Array<EventModel>,
-	parentId: EventModel,
-	linkedFrom: EventModel
+export interface EventModelType extends Omit<DbEventModel, 'userId' | 'group' | 'invites'> {
+	userId: UserModel,
+	group: GroupsModelType | null,
+	invites: Array<EventModelInvitesObject<Omit<EventInviteQueryType, 'event' | 'createdAt' | 'updatedAt'>>>
 }
 
-const LinkSchema = new Schema({
+export interface EventModelWithPopulatedChains extends Omit<EventModelType, 'linkedFrom' | 'parentId'> {
+	parentId: EventModelType | null,
+	linkedFrom: EventModelType | null
+}
+
+export const LinkSchema = new Schema({
 	key: {type: String, required: true},
 	value: {type: String, required: true}
 })
 
 export const EventSchema = new Schema({
-	createdAt: {type: Date, required: true},
-	description: {type: String},
-	link: {type: LinkSchema, required: false, default: null},
-	linkedFrom: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null},
-	parentId: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null},
-	members: {type: [{
-			type: Schema.Types.ObjectId,
-			ref: 'User',
-			autopopulate: true,
-			get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
-		}], default: []},
-	priority: {type: String, required: true},
-	status: {type: String, required: true},
+	title: {type: String, required: true}, //+
+	description: {type: String}, //+
+	link: {type: LinkSchema, required: false, default: null}, //+
+	linkedFrom: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null}, //+
+	parentId: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null}, //+
+	priority: {type: String, required: true, default: "medium" as PriorityKeys, of: DbTaskPriorities},
+	status: {type: String, required: true, default: 'created' as TaskStatusesType, of: DbTaskStatuses},
 	time: {type: Date, required: true},
 	timeEnd: {type: Date, required: true},
-	title: {type: String, required: true},
 	type: {type: String, required: true},
 	userId: {
 		type: Schema.Types.ObjectId,
@@ -83,18 +87,28 @@ export const EventSchema = new Schema({
 		required: true,
 		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
 	},
-	lastChange: {type: Date, required: true},
-	calendar: {type: Schema.Types.ObjectId, ref: 'Calendar', required: true, autopopulate: true},
-	isLiked: {type: Boolean, default: false, required: true},
-	childOf: {
+	invites: {
 		type: [{
-			type: Schema.Types.ObjectId, ref: "Event"
+			type: {
+				userId: {type: Schema.Types.ObjectId, required: true, ref: "User"},
+				inviteId: {
+					type: Schema.Types.ObjectId,
+					required: true,
+					ref: "EventInvite",
+					autopopulate: true
+				},
+			},
 		}],
-		required: false,
 		default: []
-	}
-})
+	},
+	group: {type: Schema.Types.ObjectId, ref: 'Group', required: true, autopopulate: true},
+	likedUsers: {
+		type: [{type: Schema.Types.ObjectId, ref: "User", required: true}],
+		default: []
+	},
+}, {timestamps: true})
+
 
 EventSchema.plugin(autopopulate)
 
-export const Event = model<EventModel>('Event', EventSchema)
+export const EventModel = model<EventModelType>('Event', EventSchema)

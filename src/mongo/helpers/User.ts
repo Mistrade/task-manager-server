@@ -1,6 +1,6 @@
 import {UserModel} from "../models/User";
 import {UserModelResponse} from "../../common/transform/session/types";
-import {utcDate, utcString} from "../../common/common";
+import {utcString} from "../../common/common";
 
 export class UserModelHelper {
 	public static getPopulatedUserWithoutPassword(user: UserModel): UserModelResponse {

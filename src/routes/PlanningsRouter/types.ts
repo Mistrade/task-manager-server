@@ -1,69 +1,7 @@
-import {
-	DbEventChildOfItemSchemaType,
-	EventLinkItem,
-	PriorityKeys,
-	TaskStatusesType
-} from "../../mongo/models/EventModel";
+import {DbEventChildOfItemSchemaType} from "../../mongo/models/EventModel";
 import {Schema} from "mongoose";
 import {FullResponseEventModel} from "../../common/transform/events/types";
-
-export interface UpdateTaskPriority {
-	id: string,
-	field: 'priority',
-	data: PriorityKeys
-}
-
-export interface UpdateTaskStatus {
-	id: string,
-	field: 'status',
-	data: TaskStatusesType
-}
-
-export interface UpdateTaskLinkItem {
-	id: string,
-	field: 'link',
-	data: EventLinkItem
-}
-
-export interface UpdateTaskTime {
-	id: string,
-	field: 'time' | 'timeEnd',
-	data: string
-}
-
-export interface UpdateTaskTitleOrDescription {
-	id: string,
-	field: 'title' | 'description',
-	data: string
-}
-
-export interface UpdateTaskMembersList {
-	id: string,
-	field: 'members',
-	data: string,
-}
-
-export interface UpdateTaskCalendar {
-	id: Schema.Types.ObjectId,
-	field: 'calendar',
-	data: Schema.Types.ObjectId
-}
-
-export interface UpdateTaskIsLiked {
-	id: Schema.Types.ObjectId,
-	field: 'isLiked',
-	data: boolean
-}
-
-export type UpdateTaskTypes =
-	UpdateTaskPriority
-	| UpdateTaskStatus
-	| UpdateTaskLinkItem
-	| UpdateTaskTime
-	| UpdateTaskTitleOrDescription
-	| UpdateTaskMembersList
-	| UpdateTaskCalendar
-	| UpdateTaskIsLiked
+import {UpdateEventMapTypes} from "./info/types";
 
 
 export interface UpdateTaskCreatedAt {
@@ -72,7 +10,7 @@ export interface UpdateTaskCreatedAt {
 	data: string
 }
 
-export type SystemUpdateTaskTypes = UpdateTaskTypes | UpdateTaskCreatedAt
+export type SystemUpdateTaskTypes = UpdateEventMapTypes | UpdateTaskCreatedAt
 
 export interface RequestCommentAddProps {
 	message: string,

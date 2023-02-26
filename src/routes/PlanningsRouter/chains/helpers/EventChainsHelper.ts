@@ -1,13 +1,21 @@
-import {AddEventChildOfProps} from "../types";
-import {DbEventChildOfItemSchemaType, EventModel, EventModelType} from "../../../mongo/models/EventModel";
-import {eventSnapshot, utcDate} from "../../../common/common";
-import mongoose from "mongoose";
-import {createEventHistoryNote, EventHistory} from "../../../mongo/models/EventHistory";
-import {EventHelper} from "../events/helpers/eventHelper";
-import {CatchErrorHandler, ResponseException} from "../../../exceptions/ResponseException";
-import {UserModelResponse} from "../../../common/transform/session/types";
+import {AddEventChildOfProps} from "../../types";
+import {
+	DbEventChildOfItemSchemaType,
+	EventModel,
+	EventModelType,
+	EventModelWithPopulatedChains
+} from "../../../../mongo/models/EventModel";
+import {eventSnapshot, utcDate} from "../../../../common/common";
+import mongoose, {HydratedDocument, Schema} from "mongoose";
+import {createEventHistoryNote, EventHistory} from "../../../../mongo/models/EventHistory";
+import {EventHelper} from "../../events/helpers/eventHelper";
+import {CatchErrorHandler, ResponseException} from "../../../../exceptions/ResponseException";
+import {UserModelResponse} from "../../../../common/transform/session/types";
+import {ResponseGetChainsByEventId} from "../types";
+import {ShortEventItemResponse} from "../../info/types";
+import {EventInfoHelper} from "../../info/helpers/eventInfo-helper";
 
-export class EventChainsHandler {
+export class EventChainsHelper {
 	public user?: UserModelResponse
 	
 	constructor(user?: UserModelResponse) {
@@ -101,6 +109,55 @@ export class EventChainsHandler {
 			console.error('error in add childOf method: ', e)
 			return CatchErrorHandler<null>(e)
 		}
+	}
+	
+	public async getChainsByEventId(eventId: Schema.Types.ObjectId): Promise<ResponseGetChainsByEventId> {
+		
+		EventHelper.checkEventId(eventId)
+		
+		const eventApi = new EventHelper(this.user)
+		
+		
+		const event: HydratedDocument<EventModelWithPopulatedChains> = await eventApi.getEventWithCheckRoots<EventModelWithPopulatedChains>(
+			{_id: eventId},
+			'creator',
+			[
+				{path: "parentId"}, {path: "linkedFrom"}
+			]
+		)
+			.then(r => r)
+			.catch((e) => {
+				const {status, json} = CatchErrorHandler(e)
+				throw new ResponseException(
+					status === 404
+						? ResponseException.createObject(403, 'error', 'Событие не найдено или недостаточно прав доступа для просмотра связей события')
+						: ResponseException.createObject(status, json.info?.type || "error", json.info?.message || "Произошла непредвиденная ошибка при проверке события")
+				)
+			})
+		
+		const obj: ResponseGetChainsByEventId = {
+			linkedFrom: event.linkedFrom ? eventApi.buildShortEventResponseObject(event.linkedFrom) : null,
+			parentEvent: event.parentId ? eventApi.buildShortEventResponseObject(event.parentId) : null,
+			childOf: []
+		}
+		
+		try {
+			const childOfList: Array<HydratedDocument<EventModelType>> | null = await eventApi.getEventList({
+				parentId: event._id,
+			})
+			
+			if (!childOfList) {
+				throw new ResponseException(
+					ResponseException.createObject(500, 'error', 'Ошибка при поиска дочерних событий')
+				)
+			}
+			
+			obj.childOf = childOfList.map((e): ShortEventItemResponse => eventApi.buildShortEventResponseObject(e))
+		} catch (e) {
+			obj.childOf = []
+		}
+		
+		return obj
 	}
 	
 }

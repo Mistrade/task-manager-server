@@ -1,8 +1,8 @@
+import * as mongoose from "mongoose";
 import {Schema} from "mongoose";
 import {UserModelHelper} from "../helpers/User";
 import {UserModel} from "./User";
 import {utcDate} from "../../common/common";
-import * as mongoose from "mongoose";
 import {UserModelResponse} from "../../common/transform/session/types";
 import autopopulate from "mongoose-autopopulate";
 

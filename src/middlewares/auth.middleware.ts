@@ -5,7 +5,8 @@ import {User, UserModel} from "../mongo/models/User";
 import JWT from "jsonwebtoken";
 import {Config} from "../config/config";
 import {JWTAccessTokenPayload} from "../routes/SessionRouter/SessionRouter";
-import {AuthRequest} from "../routes/EventsRouter/EventsRouter";
+import {AuthRequest} from "../routes/PlanningsRouter";
+import {utcString} from "../common/common";
 
 interface ErrorObject {
 	message: string,
@@ -55,7 +56,7 @@ export async function AuthMiddleware(req: AuthRequest, res: express.Response<Err
 			})
 		}
 		
-		const user = await User.findOne({_id: userInfoFromJWT.id})
+		const user: UserModel | null = await User.findOne({_id: userInfoFromJWT.id})
 		
 		if (!user) {
 			return res.status(404).json({
@@ -63,7 +64,15 @@ export async function AuthMiddleware(req: AuthRequest, res: express.Response<Err
 			})
 		}
 		
-		req.user = user
+		req.user = {
+			_id: user._id,
+			email: user.email,
+			surname: user.surname,
+			name: user.name,
+			lastUpdate: utcString(user.lastUpdate),
+			created: utcString(user.created),
+			phone: user.phone,
+		}
 		
 	}
 	

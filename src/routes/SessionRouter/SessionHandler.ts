@@ -1,5 +1,4 @@
-import {UserModel} from "../../mongo/models/User";
-import {ResponseException} from "./ResponseException";
+import {ResponseException} from "../../exceptions/ResponseException";
 import {UserModelResponse} from "../../common/transform/session/types";
 
 export class SessionHandler {
