@@ -4,7 +4,6 @@ import {SessionHandler} from "../../../SessionRouter/SessionHandler";
 import {ResponseException} from "../../../../exceptions/ResponseException";
 import {UserModelResponse} from "../../../../common/transform/session/types";
 import {objectIdIsEquals, utcDate} from "../../../../common/common";
-import {EventModelFilters} from "../../index";
 import {EventHandler_Create_RequestData} from "../types";
 import {GroupHelper} from "../../groups/helpers/groupHelper";
 import {EventInfoHelper} from "../../info/helpers/eventInfo-helper";
@@ -15,6 +14,8 @@ import {User, UserModel} from "../../../../mongo/models/User";
 import {EventInviteModel, EventInviteQueryType} from "../../../../mongo/models/EventInvite";
 import {EventBuildHelper} from "./eventBuildHelper";
 import {RequestEventFilters, ReturnEventTypeAfterBuild} from "../../info/types";
+import {EventModelFilters} from "../../types";
+import {Comment} from "../../../../mongo/models/Comment";
 
 
 export class EventHelper extends EventBuildHelper {
@@ -362,10 +363,12 @@ export class EventHelper extends EventBuildHelper {
 		
 		//4.
 		await EventModel.deleteMany({
-			_id: {
-				$in: onlyCreatorEventsIdList
-			},
+			_id: {$in: onlyCreatorEventsIdList},
 			userId: this.user._id
+		})
+		
+		await Comment.deleteMany({
+			eventId: {$in: onlyCreatorEventsIdList}
 		})
 		
 		//5.

@@ -5,7 +5,8 @@ import {HydratedDocument, Schema} from "mongoose";
 import {ResponseException} from "../../../../exceptions/ResponseException";
 import {UserModelHelper} from "../../../../mongo/helpers/User";
 import {UserModel} from "../../../../mongo/models/User";
-import {ChangeGroupSelectRequestProps, GetGroupListRequestProps} from "../types";
+import {ChangeGroupSelectRequestProps, CreateGroupProps, GetGroupListRequestProps} from "../types";
+import {GroupValidateHelper} from "./groupValidateHelper";
 
 export type MongoFilters<T extends object> = {
 	[key in keyof T]?: T[key]
@@ -13,15 +14,15 @@ export type MongoFilters<T extends object> = {
 	[key in string]?: any
 }
 
-
-export class GroupHelper {
+export class GroupHelper extends GroupValidateHelper {
 	public user: UserModelResponse
 	
 	constructor(user?: UserModelResponse) {
+		super()
 		this.user = new SessionHandler(user).checkUser()
 	}
 	
-	public async changeSelectGroup(values: ChangeGroupSelectRequestProps){
+	public async changeSelectGroup(values: ChangeGroupSelectRequestProps) {
 		await GroupModel.updateOne<GroupsModelType>({
 			_id: values.groupId,
 			userId: this.user._id
@@ -30,7 +31,7 @@ export class GroupHelper {
 		})
 	}
 	
-	public async getGroupsList (options: GetGroupListRequestProps): Promise<Array<GroupsModelType>> {
+	public async getGroupsList(options: GetGroupListRequestProps): Promise<Array<GroupsModelType>> {
 		
 		const list: Array<GroupsModelType> | null = await GroupModel.find({
 			userId: this.user._id,
@@ -39,7 +40,7 @@ export class GroupHelper {
 			}
 		})
 		
-		if(!list) {
+		if (!list) {
 			throw new ResponseException(
 				ResponseException.createObject(404, 'error', 'Группы событий не найдены')
 			)
@@ -116,5 +117,91 @@ export class GroupHelper {
 			...this,
 			result
 		}
+	}
+	
+	public async create(data: CreateGroupProps): Promise<GroupsModelResponse> {
+		const {title, color} = data
+		
+		const resultValidate = this.validateGroupTitle(title) && this.validateGroupColor(color)
+		
+		if (!resultValidate) {
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'Некорректные входные параметры для создания группы событий')
+			)
+		}
+		
+		const createdGroup: HydratedDocument<GroupsModelType> | null = await GroupModel.create({
+			title: title.trim(),
+			color: color,
+			editable: true,
+			deletable: true,
+			isSelected: true,
+			type: 'Custom',
+			userId: this.user._id,
+		})
+		
+		if (!createdGroup) {
+			throw new ResponseException(
+				ResponseException.createObject(500, 'error', 'Не удалось создать группу событий')
+			)
+		}
+		
+		const resultGroup = GroupHelper.buildGroupItemForResponse(createdGroup)
+		
+		if (!resultGroup) {
+			throw new ResponseException(
+				ResponseException.createObject(500, 'error', 'Группа событий была создана, но произошла непредвиденная ошибка при формировании ответа')
+			)
+		}
+		
+		return resultGroup
+	}
+	
+	public async remove(groupId: Schema.Types.ObjectId): Promise<void> {
+		await GroupModel.deleteOne({
+			userId: this.user._id,
+			_id: groupId,
+			deletable: true,
+		})
+	}
+	
+	public async updateGroupInfo(groupId: Schema.Types.ObjectId, props: CreateGroupProps){
+		const {title, color} = props
+		
+		const validate = this.validateGroupTitle(title) && this.validateGroupColor(color)
+		
+		if(!validate){
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'Невалидное значение цвета или заголовка')
+			)
+		}
+		
+		const group: HydratedDocument<GroupsModelType> | null = await GroupModel.findOne({
+			_id: groupId
+		})
+		
+		if(!group){
+			throw new ResponseException(
+				ResponseException.createObject(404, 'error', 'Группа событий для обновления не найдена')
+			)
+		}
+		
+		if(!group.editable){
+			throw new ResponseException(
+				ResponseException.createObject(403, 'error', 'Эту группу событий нельзя редактировать')
+			)
+		}
+		
+		if(group.title.trim() === title.trim() && group.color === color){
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'Изменений не выявлено')
+			)
+		}
+		
+		group.title = title.trim()
+		group.color = color
+		
+		await group.save()
+		
 	}
 }

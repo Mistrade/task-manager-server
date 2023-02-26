@@ -1,5 +1,12 @@
 import express from "express";
-import {changeGroupIsSelect, getGroupInfoById, getGroupList} from "./groups-controller";
+import {
+	changeGroupIsSelect,
+	createGroup,
+	getGroupInfoById,
+	getGroupList,
+	removeGroup,
+	updateGroupInfo
+} from "./groups-controller";
 
 const router = express.Router()
 
@@ -7,9 +14,9 @@ const router = express.Router()
 
 router.post('/get_groups_list', getGroupList)  //groups
 router.post('/change_select_group', changeGroupIsSelect) //groups
-// router.post('/create', handlers.createCalendar) //groups
-// router.post('/remove', handlers.removeCalendar) //groups
-// router.post('/update', handlers.updateCalendarInfo) //groups
+router.post('/create', createGroup) //groups
+router.post('/remove', removeGroup) //groups
+router.post('/update', updateGroupInfo) //groups
 router.get('/info/:groupId', getGroupInfoById) //groups
 
 export const GroupsRouter = router

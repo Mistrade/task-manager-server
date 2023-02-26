@@ -1,7 +1,7 @@
 import {ShortEventItemResponse} from "../info/types";
-import {AuthRequest} from "../index";
 import {Schema} from "mongoose";
 import {ApiResponse} from "../../types";
+import {AuthRequest} from "../types";
 
 export type GetChainsByEventIdFn = (
 	request: AuthRequest<null, { eventId: Schema.Types.ObjectId }>,
@@ -11,5 +11,5 @@ export type GetChainsByEventIdFn = (
 export interface ResponseGetChainsByEventId {
 	parentEvent: null | ShortEventItemResponse,
 	linkedFrom: null | ShortEventItemResponse,
-	childOf: Array<ShortEventItemResponse> | null
+	childrenEvents: Array<ShortEventItemResponse> | null
 }

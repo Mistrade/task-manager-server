@@ -5,8 +5,8 @@ import {User, UserModel} from "../mongo/models/User";
 import JWT from "jsonwebtoken";
 import {Config} from "../config/config";
 import {JWTAccessTokenPayload} from "../routes/SessionRouter/SessionRouter";
-import {AuthRequest} from "../routes/PlanningsRouter";
 import {utcString} from "../common/common";
+import {AuthRequest} from "../routes/PlanningsRouter/types";
 
 interface ErrorObject {
 	message: string,

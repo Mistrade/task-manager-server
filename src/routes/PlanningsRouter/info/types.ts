@@ -1,4 +1,3 @@
-import {AuthRequest, FilterTaskStatuses} from "../index";
 import {ByEventIdType} from "../events/types";
 import {ApiResponse} from "../../types";
 import {
@@ -15,6 +14,7 @@ import {EventInviteAcceptedStatuses, EventInviteAccessRights} from "../../../mon
 import {Dayjs} from "dayjs";
 import {AnyObject} from "../history/helper/historyHelper";
 import {CustomObject} from "../../../common/common";
+import {AuthRequest, FilterTaskStatuses} from "../types";
 
 export type DateInputValue = Dayjs | Date | string | undefined
 

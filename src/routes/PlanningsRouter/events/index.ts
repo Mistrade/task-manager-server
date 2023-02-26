@@ -18,7 +18,7 @@ router.post('/remove', EventsHandler.remove) //events
 router.use('/info', EventInfoRouter) //+
 router.use('/history', HistoryRouter) //+
 router.use('/chains', ChainsRouter)
-router.use('/groups', GroupsRouter)
+router.use('/groups', GroupsRouter) //+
 router.use('/comments', CommentsRouter)
 
 

@@ -1,7 +1,7 @@
-import {FilterTaskStatuses} from "../routes/PlanningsRouter";
 import {PriorityKeys, TaskStatusesType} from "../mongo/models/EventModel";
 import {EventHistoryEditableFieldNames} from "../mongo/models/EventHistory";
 import {EventInviteAccessRights} from "../mongo/models/EventInvite";
+import {FilterTaskStatuses} from "../routes/PlanningsRouter/types";
 
 type TaskStatusesObjectProps = {
 	[key in FilterTaskStatuses]: Array<TaskStatusesType>

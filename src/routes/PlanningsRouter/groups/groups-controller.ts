@@ -4,6 +4,8 @@ import {GroupHelper} from "./helpers/groupHelper";
 import {GroupsRouter} from "./index";
 import {GroupsModelType} from "../../../mongo/models/Group";
 import {UserModelResponse} from "../../../common/transform/session/types";
+import {EventModel} from "../../../mongo/models/EventModel";
+import {EventHelper} from "../events/helpers/eventHelper";
 
 export const getGroupInfoById: GroupControllerObject['getGroupInfoById'] = async (request, response) => {
 	try {
@@ -73,6 +75,80 @@ export const changeGroupIsSelect: GroupControllerObject['changeGroupIsSelect'] =
 		const groupApi = new GroupHelper(user)
 		
 		await groupApi.changeSelectGroup(body)
+		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(null)
+		)
+		
+		return response.status(status).json(json)
+	} catch (e) {
+		console.error(`error in ${request.originalUrl}: `, e)
+		const {status, json} = CatchErrorHandler(e)
+		return response.status(status).json(json)
+	}
+}
+
+export const createGroup: GroupControllerObject['createGroup'] = async (request, response) => {
+	try {
+		let {user, body} = request
+		
+		const groupApi = new GroupHelper(user)
+		
+		const group = await groupApi.create(body)
+		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(group)
+		)
+		
+		return response.status(status).json(json)
+	} catch (e) {
+		console.error(`error in ${request.originalUrl}: `, e)
+		const {status, json} = CatchErrorHandler(e)
+		return response.status(status).json(json)
+	}
+}
+
+export const removeGroup: GroupControllerObject['removeGroup'] = async (request, response) => {
+	try {
+		let {user, body: {groupId}} = request
+		
+		const groupApi = new GroupHelper(user)
+		const eventApi = new EventHelper(user)
+		
+		await groupApi
+			.remove(groupId)
+			.then(async () => {
+				await eventApi.remove({
+					group: groupId,
+					userId: eventApi.user._id
+				})
+			})
+			.catch((reason) => {
+				console.error('remove group error: ', reason)
+				throw new ResponseException(
+					ResponseException.createObject(500, 'error', 'Во время удаления группы событий произошла непредвиденная ошибка')
+				)
+			})
+		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(null)
+		)
+		
+		return response.status(status).json(json)
+	} catch (e) {
+		console.error(`error in ${request.originalUrl}: `, e)
+		const {status, json} = CatchErrorHandler(e)
+		return response.status(status).json(json)
+	}
+}
+
+export const updateGroupInfo: GroupControllerObject['updateGroupInfo'] = async (request, response) => {
+	try {
+		let {user, body} = request
+		
+		const groupApi = new GroupHelper(user)
+		
+		await groupApi.updateGroupInfo(body.groupId, body)
 		
 		const {status, json} = new ResponseException(
 			ResponseException.createSuccessObject(null)

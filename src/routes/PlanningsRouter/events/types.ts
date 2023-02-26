@@ -1,8 +1,8 @@
-import {AuthRequest} from "../index";
 import {ApiResponse} from "../../types";
 import {Schema} from "mongoose";
 import {CalendarPriorityKeys, EventLinkItem, TaskStatusesType} from "../../../mongo/models/EventModel";
 import {EventInviteAccessRights} from "../../../mongo/models/EventInvite";
+import {AuthRequest} from "../types";
 
 export interface ByEventIdType {
 	eventId: Schema.Types.ObjectId

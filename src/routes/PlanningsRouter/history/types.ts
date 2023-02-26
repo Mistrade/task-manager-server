@@ -1,7 +1,7 @@
-import {AuthRequest} from "../index";
 import {ApiResponse} from "../../types";
 import {Schema} from "mongoose";
 import {EventHistoryQueryResult} from "../../../mongo/models/EventHistory";
+import {AuthRequest} from "../types";
 
 export interface BuildHistoryItemOptions {
 	customDescription?: string,

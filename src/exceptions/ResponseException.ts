@@ -1,4 +1,4 @@
-import {CustomResponseBody, ErrorTypes, ResponseReturned} from "../routes/PlanningsRouter";
+import {CustomResponseBody, ErrorTypes, ResponseReturned} from "../routes/PlanningsRouter/types";
 
 export class ResponseException<T extends any = any> {
 	public status: number;

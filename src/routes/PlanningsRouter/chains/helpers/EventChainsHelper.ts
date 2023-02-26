@@ -138,7 +138,7 @@ export class EventChainsHelper {
 		const obj: ResponseGetChainsByEventId = {
 			linkedFrom: event.linkedFrom ? eventApi.buildShortEventResponseObject(event.linkedFrom) : null,
 			parentEvent: event.parentId ? eventApi.buildShortEventResponseObject(event.parentId) : null,
-			childOf: []
+			childrenEvents: []
 		}
 		
 		try {
@@ -152,9 +152,9 @@ export class EventChainsHelper {
 				)
 			}
 			
-			obj.childOf = childOfList.map((e): ShortEventItemResponse => eventApi.buildShortEventResponseObject(e))
+			obj.childrenEvents = childOfList.map((e): ShortEventItemResponse => eventApi.buildShortEventResponseObject(e))
 		} catch (e) {
-			obj.childOf = []
+			obj.childrenEvents = []
 		}
 		
 		return obj

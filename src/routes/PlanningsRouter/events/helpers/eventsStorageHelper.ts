@@ -10,12 +10,24 @@ import {
 } from "../../info/types";
 import dayjs, {Dayjs} from "dayjs";
 import {TaskFilteredStatusesObject} from "../../../../common/constants";
-import {FilterTaskStatuses} from "../../index";
+import {FilterTaskStatuses} from "../../types";
 
+/** @class EventsStorageHelper
+ * @summary Класс, с набором методов для сборки EventStorage (формат ответа) и схемы событий
+ * @since 25.02.2023
+ * @author Андрей Черников
+ */
 export class EventsStorageHelper {
 	constructor() {
 	}
 	
+	/**@name utcOffsetDate
+	 * @summary Добавляет к полученной дате, смещение от UTC
+	 * @param date {Date, Dayjs, string} - Дата, к которой надо добавить смещение от UTC
+	 * @param utcOffset - Смещение от UTC в минутах
+	 * @private
+	 * @since 25.02.2023
+	 */
 	private utcOffsetDate(date: Date | Dayjs | string, utcOffset: number): Dayjs {
 		if (!utcOffset || utcOffset === 0) {
 			return dayjs(date)
@@ -23,6 +35,7 @@ export class EventsStorageHelper {
 		
 		return dayjs(date).utcOffset(utcOffset, false)
 	}
+	
 	
 	private setEventAtEventsStorageDate<BuildType extends EventBuildTypes>(
 		storage: EventsStorage<BuildType>,

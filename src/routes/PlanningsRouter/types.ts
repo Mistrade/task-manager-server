@@ -1,7 +1,9 @@
-import {DbEventChildOfItemSchemaType} from "../../mongo/models/EventModel";
+import {DbEventChildOfItemSchemaType, EventModelType} from "../../mongo/models/EventModel";
 import {Schema} from "mongoose";
 import {FullResponseEventModel} from "../../common/transform/events/types";
 import {UpdateEventMapTypes} from "./info/types";
+import express from "express";
+import {UserModelResponse} from "../../common/transform/session/types";
 
 
 export interface UpdateTaskCreatedAt {
@@ -38,3 +40,24 @@ export interface AddEventParentIdProps {
 
 export type AddChainsType = AddEventChildOfProps | AddEventParentIdProps
 
+export interface AuthRequest<Data extends any = any, Params = any> extends express.Request<Params, any, Data> {
+	user?: UserModelResponse
+}
+
+export type FilterTaskStatuses = 'in_work' | 'completed' | 'archive' | 'created' | 'all'
+export type ErrorTypes = 'info' | 'success' | 'warning' | 'error' | 'default'
+
+export interface CustomResponseBody<T> {
+	data: T | null,
+	info?: {
+		message: string,
+		type: ErrorTypes
+	}
+}
+
+export interface ResponseReturned<T extends any = any> {
+	status: number,
+	json: T
+}
+
+export type EventModelFilters = Partial<{ [key in keyof EventModelType | string]: any }>
