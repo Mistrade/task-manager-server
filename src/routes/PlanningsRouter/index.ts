@@ -1,16 +1,15 @@
 import express from "express";
 import {
 	CalendarPriorityKeys,
-	Event,
 	EventLinkItem,
 	EventModel,
-	EventModelWithPopulateChildOf,
+	EventModelType,
+	EventModelWithPopulatedChains,
 	TaskStatusesType
 } from "../../mongo/models/EventModel";
-import {UserModel} from "../../mongo/models/User";
 import {AuthMiddleware} from "../../middlewares/auth.middleware";
-import dayjs from "dayjs";
-import {Schema} from "mongoose";
+import dayjs, {Dayjs} from "dayjs";
+import {HydratedDocument, Schema} from "mongoose";
 import {
 	eventSnapshot,
 	getTaskStorage,
@@ -21,7 +20,7 @@ import {
 	UpdateTaskInfo,
 	utcDate
 } from "../../common/common";
-import {EventChainsObject, RequestCommentAddProps, UpdateTaskTypes} from "./types";
+import {AddChainsType, EventChainsObject, RequestCommentAddProps, UpdateTaskTypes} from "./types";
 import {
 	colorRegExpDefault,
 	colorRegExpRGBA,
@@ -30,15 +29,20 @@ import {
 } from "../../common/constants";
 import {Calendars, CalendarsModel} from "../../mongo/models/Calendars";
 import {FullResponseEventModel, ShortEventItemResponse} from "../../common/transform/events/types";
-import {EventTransformer} from "../../common/transform/events/events";
+import {EventTransformer, transformEventSnapshot} from "../../common/transform/events/events";
 import {
 	createEventHistoryNote,
 	EventHistory,
-	EventHistoryPopulatedItem,
-	EventHistoryResponseItem
+	EventHistoryResponseItem,
+	PopulatedEventHistoryDb
 } from "../../mongo/models/EventHistory";
 import {Comment, CommentModel, CommentSchemaType} from "../../mongo/models/Comment";
 import {getChainsCount, getCommentsCount, getHistoryItemsCount} from "./EventRouterHelpers";
+import {getEventChains} from "./chains/getEventChains";
+import {EventChainsHandler} from "./chains/EventChainsHandler";
+import {UserModelResponse} from "../../common/transform/session/types";
+import {CatchErrorHandler, ResponseException} from "../../exceptions/ResponseException";
+import {EventHistoryHandler} from "./history/EventHistoryHandler";
 
 const route = express.Router()
 
@@ -58,7 +62,7 @@ interface RequestTaskBody {
 }
 
 export interface AuthRequest<Data extends any = any, Params = any> extends express.Request<Params, any, Data> {
-	user?: UserModel
+	user?: UserModelResponse
 }
 
 export type FilterTaskStatuses = 'in_work' | 'completed' | 'archive' | 'created' | 'all'
@@ -71,6 +75,11 @@ interface GetTaskAtDayInputValues {
 	taskStatus: FilterTaskStatuses,
 	onlyFavorites?: boolean,
 	utcOffset: number,
+	exclude?: {
+		eventIds?: Array<Schema.Types.ObjectId>,
+		linkedFrom?: Schema.Types.ObjectId,
+		parentId?: Schema.Types.ObjectId,
+	}
 }
 
 interface GetTaskSchemeInputProps {
@@ -78,7 +87,7 @@ interface GetTaskSchemeInputProps {
 	toDate: string
 }
 
-type ErrorTypes = 'info' | 'success' | 'warning' | 'error' | 'default'
+export type ErrorTypes = 'info' | 'success' | 'warning' | 'error' | 'default'
 
 export interface CustomResponseBody<T> {
 	data: T | null,
@@ -92,91 +101,118 @@ type GetTaskSchemeResult = {
 	[key: string]: boolean | undefined
 }
 
-interface GetTaskFiltersErrorReturned {
+export interface ResponseReturned<T extends any = any> {
 	status: number,
-	json: any
+	json: T
 }
 
-type GetTaskFiltersScopeReturned = Partial<{ [key in keyof EventModel]: any }>
+export type EventModelFilters = Partial<{ [key in keyof EventModelType | string]: any }>
 type GetTaskDateFiltersReturnedQuery = { [key in string]: any }
 type GetTaskDateFiltersReturned = {
-	startDate: Date,
-	endDate: Date,
+	startDate: Date | null,
+	endDate: Date | null,
 	filter: GetTaskDateFiltersReturnedQuery
 }
 
-export const getTaskDateFilters = (fromDate: string | Date | undefined, toDate: string | Date | undefined): GetTaskFiltersErrorReturned | GetTaskDateFiltersReturned => {
-	const startDate = dayjs(fromDate)
+export const getTaskDateFilters = (fromDate: string | Date | undefined, toDate: string | Date | undefined): ResponseReturned | GetTaskDateFiltersReturned => {
+	let startDate: Dayjs | null = fromDate ? dayjs(fromDate) : null
+	let endDate: Dayjs | null = toDate ? dayjs(toDate) : null
 	
-	if (!startDate.isValid()) {
+	if (!startDate?.isValid()) {
+		startDate = null
+	}
+	
+	
+	if (!endDate?.isValid()) {
+		endDate = null
+	}
+	
+	if (startDate && endDate) {
 		return {
-			status: 400,
-			json: []
+			startDate: startDate.toDate(),
+			endDate: endDate.toDate(),
+			filter: {
+				$or: [
+					{
+						//Кейс когда событие начинается и завершается между startDate и endDate
+						time: {
+							$gte: utcDate(startDate),
+							$lte: utcDate(endDate)
+						},
+						timeEnd: {
+							$gte: utcDate(startDate),
+							$lte: utcDate(endDate)
+						}
+					},
+					{
+						//Кейс когда событие начинается раньше startDate и заканчивается позже endDate
+						time: {
+							$lte: utcDate(startDate)
+						},
+						timeEnd: {
+							$gte: utcDate(endDate)
+						}
+					},
+					{
+						//Кейс когда событие начинается раньше startDate, а заканчивается между startDate и andDate
+						time: {
+							$lte: utcDate(startDate)
+						},
+						timeEnd: {
+							$gte: utcDate(startDate),
+							$lte: utcDate(endDate)
+						}
+					},
+					{
+						//Кейс когда событие начинается между startDate и endDate, а заканчивается позже endDate
+						time: {
+							$gte: utcDate(startDate),
+							$lte: utcDate(endDate)
+						},
+						timeEnd: {
+							$gte: utcDate(endDate)
+						}
+					}
+				],
+			}
 		}
 	}
 	
-	const endDate = dayjs(toDate)
-	
-	if (!endDate.isValid()) {
+	if (startDate && !endDate) {
 		return {
-			status: 400,
-			json: []
+			startDate: startDate.toDate(),
+			endDate: null,
+			filter: {
+				//Кейс когда событие заканчивается позже чем время начала, но заканчивается позже
+				timeEnd: {
+					$gte: utcDate(startDate)
+				}
+			}
+		}
+	}
+	
+	if (!startDate && endDate) {
+		return {
+			startDate: null,
+			endDate: endDate.toDate(),
+			filter: {
+				timeEnd: {
+					$lte: utcDate(endDate)
+				}
+			}
 		}
 	}
 	
 	return {
-		startDate: startDate.toDate(),
-		endDate: endDate.toDate(),
-		filter: {
-			$or: [
-				{
-					//Кейс когда событие начинается и завершается между startDate и endDate
-					time: {
-						$gte: utcDate(startDate),
-						$lte: utcDate(endDate)
-					},
-					timeEnd: {
-						$gte: utcDate(startDate),
-						$lte: utcDate(endDate)
-					}
-				},
-				{
-					//Кейс когда событие начинается раньше startDate и заканчивается позже endDate
-					time: {
-						$lte: utcDate(startDate)
-					},
-					timeEnd: {
-						$gte: utcDate(endDate)
-					}
-				},
-				{
-					//Кейс когда событие начинается раньше startDate, а заканчивается между startDate и andDate
-					time: {
-						$lte: utcDate(startDate)
-					},
-					timeEnd: {
-						$gte: utcDate(startDate),
-						$lte: utcDate(endDate)
-					}
-				},
-				{
-					//Кейс когда событие начинается между startDate и endDate, а заканчивается позже endDate
-					time: {
-						$gte: utcDate(startDate),
-						$lte: utcDate(endDate)
-					},
-					timeEnd: {
-						$gte: utcDate(endDate)
-					}
-				}
-			],
-		}
+		startDate: null,
+		endDate: null,
+		filter: {}
 	}
 }
 
 
-export const getTaskFiltersOfScope = async (res: express.Response, user: UserModel, options: Partial<GetTaskAtDayInputValues>): Promise<GetTaskFiltersErrorReturned | GetTaskFiltersScopeReturned> => {
-	const {fromDate, toDate, title, priority, taskStatus, onlyFavorites} = options
+export const getTaskFiltersOfScope = async (res: express.Response, user: UserModelResponse, options: Partial<GetTaskAtDayInputValues>): Promise<ResponseReturned | EventModelFilters> => {
+	const {fromDate, toDate, title, priority, taskStatus, onlyFavorites, exclude, utcOffset} = options
 	
 	const dateFilter = getTaskDateFilters(fromDate, toDate)
 	
@@ -189,7 +225,7 @@ export const getTaskFiltersOfScope = async (res: express.Response, user: UserMod
 		isSelected: true,
 	})
 	
-	const filter: Partial<{ [key in keyof EventModel]: any }> = {
+	const filter: Partial<{ [key in keyof EventModelType]: any }> = {
 		...dateFilter.filter,
 		userId: user._id,
 		calendar: {
@@ -217,6 +253,26 @@ export const getTaskFiltersOfScope = async (res: express.Response, user: UserMod
 	if (priority && priority !== 'not_selected') {
 		filter.priority = {
 			$eq: priority
+		}
+	}
+	
+	if (exclude) {
+		if (exclude.eventIds && exclude.eventIds.length) {
+			filter._id = {
+				$nin: exclude.eventIds,
+			}
+		}
+		
+		if (exclude.parentId) {
+			filter.parentId = {
+				$ne: exclude.parentId
+			}
+		}
+		
+		if (exclude.linkedFrom) {
+			filter.linkedFrom = {
+				$ne: exclude.linkedFrom
+			}
 		}
 	}
 	
@@ -300,7 +356,7 @@ export const handlers = {
 			
 			const lastChange = utcDate()
 			
-			const createdEvent: EventModel = await Event.create({
+			const createdEvent: EventModelType = await EventModel.create({
 				linkedFrom: linkedFrom || undefined,
 				parentId: parentId || undefined,
 				calendar: resultCalendar,
@@ -332,12 +388,12 @@ export const handlers = {
 			}
 			
 			if (parentId && createdEvent._id) {
-				await Event.updateOne<EventModel>(
+				await EventModel.updateOne<EventModelType>(
 					{_id: parentId},
-					{$push: {childOf: createdEvent._id}}
+					{$push: {childOf: {event: createdEvent._id}}}
 				)
 				
-				const parentEvent: EventModel | null = await Event.findOne({
+				const parentEvent: EventModelType | null = await EventModel.findOne({
 					_id: parentId
 				})
 				
@@ -394,7 +450,7 @@ export const handlers = {
 					.json(filter.json)
 			}
 			
-			const eventsFromDB: Array<EventModel> | null = await Event.find(filter, {}, {
+			const eventsFromDB: Array<EventModelType> | null = await EventModel.find(filter, {}, {
 				sort: {time: 1},
 				populate: [
 					{path: 'calendar'}
@@ -423,7 +479,7 @@ export const handlers = {
 				.json({})
 		}
 	},
-	async getTaskAtDay(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItemResponse>>) {
+	async getEventsArray(req: AuthRequest<GetTaskAtDayInputValues>, res: express.Response<Array<ShortEventItemResponse>>) {
 		try {
 			const {user} = req
 			
@@ -441,7 +497,7 @@ export const handlers = {
 					.json(filter.json)
 			}
 			
-			const eventsFromDB: Array<EventModel> | null = await Event.find(filter,
+			const eventsFromDB: Array<EventModelType> | null = await EventModel.find(filter,
 				{},
 				{
 					sort: {time: 1},
@@ -476,7 +532,7 @@ export const handlers = {
 			
 			const filters = await getTaskFiltersOfScope(res, user, req.body)
 			
-			const events: null | Array<EventModel> = await Event.find(filters)
+			const events: null | Array<EventModelType> = await EventModel.find(filters)
 			
 			if (!events) {
 				return res.status(200).json({})
@@ -520,7 +576,7 @@ export const handlers = {
 			
 			const {id: taskId} = body
 			
-			const event: EventModel | null = await Event.findOne({
+			const event: EventModelType | null = await EventModel.findOne({
 				_id: taskId
 			})
 			
@@ -541,7 +597,7 @@ export const handlers = {
 			}
 			
 			if (event.status !== 'archive' && !body.remove) {
-				await Event.updateOne({
+				await EventModel.updateOne({
 					_id: taskId
 				}, {
 					status: 'archive'
@@ -552,7 +608,7 @@ export const handlers = {
 				})
 			}
 			
-			await Event.deleteOne({
+			await EventModel.deleteOne({
 				_id: taskId
 			})
 			
@@ -565,7 +621,7 @@ export const handlers = {
 			})
 			
 			if (event.parentId) {
-				await Event.updateOne({
+				await EventModel.updateOne({
 					_id: event.parentId,
 				}, {
 					$pull: {
@@ -575,7 +631,7 @@ export const handlers = {
 			}
 			
 			if (event.childOf.length > 0) {
-				await Event.updateMany({
+				await EventModel.updateMany({
 					parentId: event._id
 				}, {
 					parentId: undefined
@@ -637,7 +693,7 @@ export const handlers = {
 			
 			console.log('календари в которых ищу события: ', calendars)
 			
-			const filters: { [key in keyof EventModel]?: any } = {
+			const filters: { [key in keyof EventModelType]?: any } = {
 				...dateFilter.filter,
 				userId: user._id,
 				calendar: {
@@ -645,7 +701,7 @@ export const handlers = {
 				}
 			}
 			
-			const eventsFromDB: Array<EventModel> | null = await Event.find(filters)
+			const eventsFromDB: Array<EventModelType> | null = await EventModel.find(filters)
 			
 			if (eventsFromDB && eventsFromDB.length > 0) {
 				let result: GetTaskSchemeResult = {}
@@ -727,7 +783,7 @@ export const handlers = {
 					})
 			}
 			
-			const taskInfo: EventModel | null = await Event.findOne({
+			const taskInfo: EventModelType | null = await EventModel.findOne({
 				_id: params.taskId
 			})
 			
@@ -817,10 +873,14 @@ export const handlers = {
 					})
 			}
 			
-			const taskInfo: EventModelWithPopulateChildOf | null = await Event.findOne({
+			const taskInfo: EventModelWithPopulatedChains | null = await EventModel.findOne({
 				_id: params.taskId
 			})
-				.populate(['childOf', 'parentId', 'linkedFrom'])
+				.populate([
+					{path: 'childOf', populate: "event"},
+					'parentId',
+					"linkedFrom"
+				])
 			
 			if (!taskInfo) {
 				return res
@@ -838,13 +898,20 @@ export const handlers = {
 				.status(200)
 				.json({
 					data: {
-						childrenEvents: taskInfo.childOf.length ? taskInfo.childOf.map(EventTransformer.eventItemResponse) : null,
+						childrenEvents: taskInfo.childOf.length
+							? taskInfo.childOf.filter((item) => item && item?._id && item.event?._id).map((item) => ({
+								_id: item._id,
+								createdAt: item.createdAt,
+								event: EventTransformer.eventItemResponse(item.event)
+							}))
+							: null,
 						parentEvent: taskInfo.parentId ? EventTransformer.eventItemResponse(taskInfo.parentId) : null,
 						linkedFromEvent: taskInfo.linkedFrom ? EventTransformer.eventItemResponse(taskInfo.linkedFrom) : null
 					}
 				})
 			
 		} catch (e) {
+			console.error(e)
 			return res
 				.status(500)
 				.json({
@@ -885,7 +952,7 @@ export const handlers = {
 				})
 			}
 			
-			const task: EventModel | null = await Event.findOne({
+			const task: EventModelType | null = await EventModel.findOne({
 				_id: body.id
 			})
 			
@@ -921,9 +988,9 @@ export const handlers = {
 				})
 			}
 			
-			await Event.updateOne({_id: task._id}, newTaskInfo)
+			await EventModel.updateOne({_id: task._id}, newTaskInfo)
 			
-			const updated: EventModel | null = await Event.findOne({
+			const updated: EventModelType | null = await EventModel.findOne({
 				_id: task._id
 			})
 			
@@ -1157,7 +1224,7 @@ export const handlers = {
 			})
 			
 			if (calendar) {
-				const events: Array<EventModel> | null = await Event.find({
+				const events: Array<EventModelType> | null = await EventModel.find({
 					calendar: req.body.id,
 				})
 				
@@ -1177,7 +1244,7 @@ export const handlers = {
 					})
 				}
 				
-				await Event.deleteMany({
+				await EventModel.deleteMany({
 					calendar: req.body.id,
 				})
 				
@@ -1398,13 +1465,17 @@ export const handlers = {
 					})
 			}
 			
-			const historyListFromDb: Array<EventHistoryPopulatedItem> | null = await EventHistory.find(
+			const historyListFromDb: Array<HydratedDocument<PopulatedEventHistoryDb>> | null = await EventHistory.find(
 				{eventId: params.taskId},
 				{},
 				{sort: {date: -1}}
 			).populate({
 				path: 'eventSnapshot',
-				populate: "childOf"
+				populate: [
+					{path: 'childOf', populate: "event"},
+					'parentId',
+					"linkedFrom"
+				]
 			})
 			
 			if (!historyListFromDb) {
@@ -1413,8 +1484,6 @@ export const handlers = {
 					info: {type: "warning", message: "Не удалось найти историю события"}
 				})
 			}
-			
-			console.log(historyListFromDb)
 			
 			return res
 				.status(200)
@@ -1425,7 +1494,7 @@ export const handlers = {
 						fieldName: item.fieldName,
 						snapshotDescription: item.snapshotDescription,
 						eventId: item.eventId,
-						eventSnapshot: EventTransformer.eventItemResponse(item.eventSnapshot as unknown as EventModel)
+						eventSnapshot: transformEventSnapshot(item.eventSnapshot)
 					}))
 				})
 			
@@ -1472,7 +1541,7 @@ export const handlers = {
 					})
 			}
 			
-			const task: EventModel | null = await Event.findOne({
+			const task: EventModelType | null = await EventModel.findOne({
 				_id: taskId
 			})
 			
@@ -1550,7 +1619,7 @@ export const handlers = {
 			
 			const {eventId, message, sourceCommentId} = body
 			
-			const event: EventModel | null = await Event.findOne({
+			const event: EventModelType | null = await EventModel.findOne({
 				_id: eventId
 			})
 			
@@ -1633,7 +1702,7 @@ export const handlers = {
 				})
 			}
 			
-			const event: EventModel | null = await Event.findOne({
+			const event: EventModelType | null = await EventModel.findOne({
 				_id: comment.eventId
 			})
 			
@@ -1680,19 +1749,57 @@ export const handlers = {
 				info: {type: "error", message: "Не удалось удалить комментарий"}
 			})
 		}
+	},
+	async addEventChains(req: AuthRequest<AddChainsType>, res: express.Response<CustomResponseBody<null>>) {
+		try {
+			const {user, body} = req
+			
+			if (body.chainType === "childOf") {
+				const _ = new EventChainsHandler(user)
+				const result = await _.pushChildOf(body)
+				return res.status(result.status).json(result.json)
+			}
+			
+			if (body.chainType === "parentId") {
+				const result = {
+					status: 200,
+					json: {
+						data: null,
+					}
+				}
+				return res.status(result.status).json(result.json)
+			}
+			
+			return res.status(400).json({
+				data: null,
+				info: {
+					type: "error",
+					message: "Неизвестный тип связи"
+				}
+			})
+			
+			
+		} catch (e) {
+			console.error(e)
+			return res.status(500).json({
+				data: null,
+				info: {type: "error", message: "Не удалось создать связи"}
+			})
+		}
 	}
 }
 
 route.use(AuthMiddleware)
+route.use()
 route.post('/add', handlers.addEvent)
-route.post('/getTaskAtDay', handlers.getTaskAtDay)
+route.post('/getEventsArray', handlers.getEventsArray)
 route.post('/getTaskAtScope', handlers.getTaskAtScope)
 route.post('/getTaskCountOfStatus', handlers.getTaskCountOfStatus)
 route.post('/remove', handlers.removeTask)
 route.post('/getTasksScheme', handlers.getTaskScheme)
 route.post('/taskInfo/update', handlers.updateTaskInfo)
 route.get('/taskInfo/:taskId', handlers.getTaskInfo)
-route.get('/getEventChains/:taskId', handlers.getEventChains)
+route.get('/getEventChains/:taskId', getEventChains)
 route.get('/getEventHistory/:taskId', handlers.getEventHistory)
 route.post('/calendars', handlers.getCalendarsList)
 route.post('/calendars/changeSelect', handlers.changeCalendarSelect)
@@ -1703,6 +1810,86 @@ route.post('/calendars/update', handlers.updateCalendarInfo)
 route.get('/comments/:taskId', handlers.getEventCommentList)
 route.post('/comments/add', handlers.addEventComment)
 route.post('/comments/remove', handlers.removeEventComment)
+route.post('/chains/add', handlers.addEventChains)
 
 
-export const EventsRouter = route
+route.post('/history/add', async (req: AuthRequest, res) => {
+	try {
+		const _ = new EventHistoryHandler(req.user)
+		
+		const event: HydratedDocument<EventModelType> | null = await EventModel.findOne({
+			_id: "63f1db022a300fa87d3d576c"
+		})
+		
+		if (!event) {
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'событие не найдено')
+			)
+		}
+		
+		// const data = await _.addToHistory(
+		// 	[
+		// 		{
+		// 			eventId: event._id,
+		// 			fieldName: "title",
+		// 			snapshotDescription: "Изменен заголовок",
+		// 			eventSnapshot: {
+		// 				title: "2222",
+		// 				priority: event.priority,
+		// 				status: event.status,
+		// 				createdAt: event.createdAt,
+		// 				originalEventId: event._id,
+		// 				user: _.user._id
+		// 			}
+		// 		},
+		// 		{
+		// 			eventId: event._id,
+		// 			fieldName: "time",
+		// 			snapshotDescription: "Изменен приоритет",
+		// 			eventSnapshot: {
+		// 				title: "2222",
+		// 				priority: event.priority,
+		// 				status: event.status,
+		// 				createdAt: event.createdAt,
+		// 				originalEventId: event._id,
+		// 				user: _.user._id,
+		// 				time: new Date()
+		// 			}
+		// 		}
+		// 	]
+		// )
+		
+		//RESULT
+		//историю можно писать, получать, удалять для этого есть готовые методы
+		
+		//TODO
+		//Создать класс UpdateEventHandler, прописать все правила обновления карточки события по доступным ключам из типа EventHistoryEditableFieldNames
+		//Этот класс должен автоматически писать записи в историю
+		
+		const result = await _.getHistoryListByEventId(event._id)
+		
+		return res.status(200).json(result)
+	} catch (e) {
+		return CatchErrorHandler(e)
+	}
+})
+
+
+route.get('/history/:eventId', async (req: AuthRequest, res) => {
+	try {
+		const _ = new EventHistoryHandler(req.user)
+		const data = await _.getHistoryListByEventId(req.params.eventId)
+		
+		return res.status(200).json(data.result)
+		
+	} catch (e) {
+		return CatchErrorHandler(e)
+	}
+})
+
+
+
+
+
+
+export const EventRouter = route

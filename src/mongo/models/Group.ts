@@ -1,8 +1,9 @@
 import {model, Schema} from "mongoose";
 import autopopulate from 'mongoose-autopopulate'
-import {UserModel, UserPopulatedWithoutPass} from "./User";
+import {UserModel} from "./User";
 import dayjs from "dayjs";
 import {UserModelHelper} from "../helpers/User";
+import {UserModelResponse} from "../../common/transform/session/types";
 
 export type CalendarsModelType = 'Invite' | 'Custom' | 'Main'
 
@@ -16,6 +17,10 @@ export interface CalendarsModel {
 	color: string,
 	deletable: boolean,
 	type: CalendarsModelType
+}
+
+export interface CalendarsModelResponse extends Omit<CalendarsModel, 'userId'> {
+	userId: UserModelResponse
 }
 
 const CalendarsSchema = new Schema({

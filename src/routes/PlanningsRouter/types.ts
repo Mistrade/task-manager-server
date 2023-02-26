@@ -1,11 +1,16 @@
-import {CalendarPriorityKeys, EventLinkItem, TaskStatusesType} from "../../mongo/models/EventModel";
+import {
+	DbEventChildOfItemSchemaType,
+	EventLinkItem,
+	PriorityKeys,
+	TaskStatusesType
+} from "../../mongo/models/EventModel";
 import {Schema} from "mongoose";
 import {FullResponseEventModel} from "../../common/transform/events/types";
 
 export interface UpdateTaskPriority {
 	id: string,
 	field: 'priority',
-	data: CalendarPriorityKeys
+	data: PriorityKeys
 }
 
 export interface UpdateTaskStatus {
@@ -77,6 +82,21 @@ export interface RequestCommentAddProps {
 
 export interface EventChainsObject {
 	parentEvent: null | FullResponseEventModel,
-	childrenEvents: null | Array<FullResponseEventModel>,
+	childrenEvents: null | Array<DbEventChildOfItemSchemaType<FullResponseEventModel>>,
 	linkedFromEvent: null | FullResponseEventModel
 }
+
+export interface AddEventChildOfProps {
+	chainType: "childOf",
+	taskId: Schema.Types.ObjectId,
+	eventsToAdd: Array<Schema.Types.ObjectId>
+}
+
+export interface AddEventParentIdProps {
+	chainType: 'parentId',
+	taskId: Schema.Types.ObjectId,
+	eventToAdd: Schema.Types.ObjectId
+}
+
+export type AddChainsType = AddEventChildOfProps | AddEventParentIdProps
+

@@ -1,9 +1,9 @@
-import {EventModel} from "../../mongo/models/EventModel";
+import {EventModelType} from "../../mongo/models/EventModel";
 import {Schema} from "mongoose";
 import {Comment, CommentModel} from "../../mongo/models/Comment";
 import {EventHistory, EventHistoryPopulatedItem} from "../../mongo/models/EventHistory";
 
-export const getChainsCount = (task: EventModel): number => {
+export const getChainsCount = (task: EventModelType): number => {
 	return (task.parentId ? 1 : 0) + (task.linkedFrom ? 1 : 0) + (task.childOf.length || 0)
 }
 
@@ -32,3 +32,4 @@ export const getHistoryItemsCount = async (taskId: Schema.Types.ObjectId): Promi
 		return 0
 	}
 }
+
