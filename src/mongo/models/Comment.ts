@@ -20,7 +20,8 @@ export interface CommentModel {
 	userId: UserModelResponse,
 	date: Date,
 	message: string,
-	sourceComment?: CommentModel | null
+	sourceComment?: CommentModel | null,
+	updatedAt: Date
 }
 
 export const CommentSchema = new Schema({
@@ -36,7 +37,7 @@ export const CommentSchema = new Schema({
 	sourceComment: {type: Schema.Types.ObjectId, ref: "Comment", autopopulate: true, default: null},
 	date: {type: Date, required: true, default: () => utcDate()},
 	message: {type: String, required: true, maxLength: 3000},
-})
+}, {timestamps: {updatedAt: true, createdAt: false}})
 
 CommentSchema.plugin(autopopulate)
 

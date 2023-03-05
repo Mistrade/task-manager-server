@@ -34,7 +34,8 @@ export class CommentsHelper {
 			userId: comment.userId,
 			message: comment.message,
 			sourceComment: comment.sourceComment,
-			_id: comment._id
+			_id: comment._id,
+			updatedAt: comment.updatedAt,
 		}
 	}
 	
