@@ -1,7 +1,7 @@
 import {SessionHandler} from "../../../SessionRouter/SessionHandler";
 import {UserModelResponse} from "../../../../common/transform/session/types";
 import {Comment, CommentModel} from "../../../../mongo/models/Comment";
-import {objectIdIsEquals} from "../../../../common/common";
+import {objectIdInArrayOfAnotherObjectId, objectIdIsEquals} from "../../../../common/common";
 import {EventModel, EventModelType} from "../../../../mongo/models/EventModel";
 import {HydratedDocument, Schema} from "mongoose";
 import {
@@ -17,7 +17,8 @@ export class CommentsHelper {
 	public user: UserModelResponse
 	
 	constructor(user?: UserModelResponse) {
-		this.user = new SessionHandler(user).checkUser()
+		const checkedUser = new SessionHandler(user).checkUser()
+		this.user = checkedUser
 	}
 	
 	private validateMessage(message: string) {
@@ -27,12 +28,13 @@ export class CommentsHelper {
 	
 	private buildCommentItem(comment: CommentModel, buildEvent: DefaultEventItemResponse): CommentResponseModel {
 		const isCommentCreator = objectIdIsEquals(comment.userId._id, this.user._id)
+		const isImportant = !!(comment.likedUsers || []).find((_id) => objectIdIsEquals(_id, this.user._id))
 		
 		return {
 			date: comment.date,
 			deletable: buildEvent.accessRights === 'owner' || isCommentCreator || false,
 			editable: isCommentCreator,
-			isImportant: false,
+			isImportant,
 			eventId: comment._id,
 			userId: comment.userId,
 			message: comment.message,
@@ -50,7 +52,9 @@ export class CommentsHelper {
 	}
 	
 	public async getCommentById(id: Schema.Types.ObjectId, throwMessage?: string): Promise<HydratedDocument<CommentModel>> {
-		const comment = await Comment.findById(id)
+		const comment = await Comment.findOne({
+			_id: id,
+		})
 		
 		if (!comment) {
 			throw new ResponseException(

@@ -10,7 +10,7 @@ export interface CreateCommentProps {
 	sourceCommentId?: Schema.Types.ObjectId | null
 }
 
-export interface CommentResponseModel extends CommentModel {
+export interface CommentResponseModel extends Omit<CommentModel, 'likedUsers'> {
 	editable: boolean,
 	deletable: boolean,
 	isImportant: boolean
@@ -29,6 +29,20 @@ export interface GetCommentListProps {
 	eventId: Schema.Types.ObjectId
 }
 
+export interface UpdateCommentIsImportantState {
+	commentId: Schema.Types.ObjectId,
+	fieldName: 'isImportant',
+	state: "toggle" | boolean
+}
+
+export interface UpdateCommentMessageState {
+	commentId: Schema.Types.ObjectId,
+	fieldName: 'content',
+	state: Omit<CreateCommentProps, 'eventId'>
+}
+
+export type EditCommentRequestProps = UpdateCommentMessageState | UpdateCommentIsImportantState
+
 export interface CommentsControllerObject {
 	createCommentToEvent(
 		request: AuthRequest<CreateCommentProps>,
@@ -44,4 +58,9 @@ export interface CommentsControllerObject {
 		request: AuthRequest<null, GetCommentListProps>,
 		response: ApiResponse<Array<CommentResponseModel>>
 	): Promise<ApiResponse<Array<CommentResponseModel>>>
+	
+	toggleIsLikedComment(
+		request: AuthRequest<UpdateCommentIsImportantState>,
+		response: ApiResponse
+	): Promise<ApiResponse>
 }

@@ -1,6 +1,7 @@
 import {CommentsControllerObject} from "./types";
 import {CatchErrorHandler, ResponseException} from "../../../exceptions/ResponseException";
-import {CommentsHelper} from "./helpers/commentsHelper";
+import {CommentsHelper} from "./helpers/comments.helper";
+import {UpdateCommentHelper} from "./helpers/update-comment.helper";
 
 export const createCommentToEvent: CommentsControllerObject['createCommentToEvent'] = async (request, response) => {
 	try {
@@ -52,6 +53,26 @@ export const getCommentListByEventId: CommentsControllerObject['getCommentListBy
 		
 		const {json, status} = new ResponseException(
 			ResponseException.createSuccessObject(result)
+		)
+		
+		return response.status(status).json(json)
+	} catch (e) {
+		console.error(`error in ${request.originalUrl}: `, e)
+		const {status, json} = CatchErrorHandler(e)
+		return response.status(status).json(json)
+	}
+}
+
+export const toggleIsImportantComment: CommentsControllerObject['toggleIsLikedComment'] = async (request, response) => {
+	try {
+		const {user, body} = request
+		
+		const commentUpdateApi = new UpdateCommentHelper(user)
+		
+		await commentUpdateApi.updateCommentInfo(body)
+		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(null)
 		)
 		
 		return response.status(status).json(json)

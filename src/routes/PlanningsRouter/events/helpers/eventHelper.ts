@@ -16,7 +16,7 @@ import {EventBuildHelper} from "./eventBuildHelper";
 import {RequestEventFilters, ReturnEventTypeAfterBuild} from "../../info/types";
 import {EventModelFilters} from "../../types";
 import {Comment} from "../../../../mongo/models/Comment";
-import {CommentsHelper} from "../../comments/helpers/commentsHelper";
+import {CommentsHelper} from "../../comments/helpers/comments.helper";
 
 
 export class EventHelper extends EventBuildHelper {
