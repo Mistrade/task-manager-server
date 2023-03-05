@@ -48,7 +48,7 @@ export const getCommentListByEventId: CommentsControllerObject['getCommentListBy
 		
 		const commentApi = new CommentsHelper(user)
 		
-		const result = await commentApi.getCommentsByEventId(eventId)
+		const result = await commentApi.getBuildCommentsList(eventId)
 		
 		const {json, status} = new ResponseException(
 			ResponseException.createSuccessObject(result)

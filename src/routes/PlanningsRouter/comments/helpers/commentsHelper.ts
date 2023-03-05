@@ -4,10 +4,13 @@ import {Comment, CommentModel} from "../../../../mongo/models/Comment";
 import {objectIdIsEquals} from "../../../../common/common";
 import {EventModel, EventModelType} from "../../../../mongo/models/EventModel";
 import {HydratedDocument, Schema} from "mongoose";
-import {CommentResponseModel, CreateCommentProps} from "../types";
+import {
+	CommentResponseModel,
+	CreateCommentProps,
+	GetCommentByEventIdReturned,
+} from "../types";
 import {EventHelper} from "../../events/helpers/eventHelper";
 import {ResponseException} from "../../../../exceptions/ResponseException";
-import {AccessRightsWithOwner} from "../../../../mongo/models/EventInvite";
 import {DefaultEventItemResponse} from "../../info/types";
 
 export class CommentsHelper {
@@ -152,7 +155,7 @@ export class CommentsHelper {
 		})
 	}
 	
-	public async getCommentsByEventId(eventId: Schema.Types.ObjectId): Promise<Array<CommentResponseModel>> {
+	public async getCommentsByEventId(eventId: Schema.Types.ObjectId): Promise<GetCommentByEventIdReturned> {
 		if (!eventId) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'error', 'На вход ожидался id события')
@@ -178,7 +181,18 @@ export class CommentsHelper {
 			)
 		}
 		
-		return comments.map((item) => this.buildCommentItem(item, buildEvent))
+		return {
+			comments,
+			buildEvent
+		}
+	}
+	
+	public async getBuildCommentsList(eventId: Schema.Types.ObjectId): Promise<Array<CommentResponseModel>> {
+		const {comments, buildEvent} = await this.getCommentsByEventId(eventId)
+		
+		return comments.map(
+			(item) => this.buildCommentItem(item, buildEvent)
+		)
 	}
 	
 	public async removeCommentsByEventId(eventId: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>, disableCheckRoots: boolean = false): Promise<boolean> {
