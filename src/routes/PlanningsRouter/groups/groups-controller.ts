@@ -113,22 +113,8 @@ export const removeGroup: GroupControllerObject['removeGroup'] = async (request,
 		let {user, body: {groupId}} = request
 		
 		const groupApi = new GroupHelper(user)
-		const eventApi = new EventHelper(user)
 		
-		await groupApi
-			.remove(groupId)
-			.then(async () => {
-				await eventApi.remove({
-					group: groupId,
-					userId: eventApi.user._id
-				})
-			})
-			.catch((reason) => {
-				console.error('remove group error: ', reason)
-				throw new ResponseException(
-					ResponseException.createObject(500, 'error', 'Во время удаления группы событий произошла непредвиденная ошибка')
-				)
-			})
+		await groupApi.remove(groupId)
 		
 		const {status, json} = new ResponseException(
 			ResponseException.createSuccessObject(null)

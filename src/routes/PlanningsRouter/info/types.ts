@@ -10,7 +10,11 @@ import {
 import {UserModelResponse, UtcDateString} from "../../../common/transform/session/types";
 import {GroupsModelResponse} from "../../../mongo/models/Group";
 import {Schema} from "mongoose";
-import {EventInviteAcceptedStatuses, EventInviteAccessRights} from "../../../mongo/models/EventInvite";
+import {
+	AccessRightsWithOwner,
+	EventInviteAcceptedStatuses,
+	EventInviteAccessRights
+} from "../../../mongo/models/EventInvite";
 import {Dayjs} from "dayjs";
 import {AnyObject} from "../history/helper/historyHelper";
 import {CustomObject} from "../../../common/common";
@@ -32,7 +36,7 @@ export type EventModelFieldsWithPopulatedUser = "userId" | "group" | 'invites' |
 type DefaultEventResponseAfterOmit = Omit<EventModelType, EventModelDateFields | EventModelFieldsWithPopulatedUser>
 
 export interface BuildResponseEventObjectOptions {
-	accessRights?: EventInviteAccessRights,
+	accessRights?: AccessRightsWithOwner,
 	acceptedStatus?: EventInviteAcceptedStatuses
 }
 
@@ -59,6 +63,7 @@ export type ShortEventItemResponseFields =
 	| 'status'
 	| 'group'
 	| 'isLiked'
+	| 'userId'
 export type ShortEventItemResponse = Pick<DefaultEventItemResponse, ShortEventItemResponseFields>
 
 //Объект, описывающий фильтры, по которым могут выполняться запросы к серверу

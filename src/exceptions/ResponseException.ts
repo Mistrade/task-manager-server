@@ -19,12 +19,12 @@ export class ResponseException<T extends any = any> {
 		}
 	}
 	
-	public static createSuccessObject<T extends object | null = any>(data: T): ResponseException<T> {
+	public static createSuccessObject<T extends object | null = any>(data: T, message?: string): ResponseException<T> {
 		return {
 			status: 200,
 			json: {
 				data,
-				info: {type: "success", message: ""}
+				info: {type: "success", message: message || ""}
 			}
 		}
 	}

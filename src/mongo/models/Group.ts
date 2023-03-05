@@ -27,8 +27,9 @@ const GroupsSchema = new Schema({
 		type: Schema.Types.ObjectId,
 		ref: 'User',
 		required: true,
-		autopopulate: true,
-		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
+		autopopulate: {
+			select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+		},
 	},
 	created: {type: Date, default: () => dayjs().utc().toDate()},
 	isSelected: {type: Boolean, required: true, default: true},

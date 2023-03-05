@@ -1,6 +1,6 @@
 import {PriorityKeys, TaskStatusesType} from "../mongo/models/EventModel";
 import {EventHistoryEditableFieldNames} from "../mongo/models/EventHistory";
-import {EventInviteAccessRights} from "../mongo/models/EventInvite";
+import {AccessRightsWithOwner, EventInviteAccessRights} from "../mongo/models/EventInvite";
 import {FilterTaskStatuses} from "../routes/PlanningsRouter/types";
 
 type TaskStatusesObjectProps = {
@@ -80,8 +80,9 @@ export const HistoryDescription: {[key in EventHistoryEditableFieldNames]: strin
 	priority: "Изменен приоритет события"
 }
 
-export const minimalRootsMap: { [key in EventInviteAccessRights]: Array<EventInviteAccessRights> } = {
-	viewer: ['viewer', 'editor', 'admin'],
-	editor: ["editor", "admin"],
-	admin: ['admin'],
+export const minimalRootsMap: { [key in AccessRightsWithOwner]: Array<AccessRightsWithOwner> } = {
+	viewer: ['viewer', 'editor', 'admin', 'owner'],
+	editor: ["editor", "admin", 'owner'],
+	admin: ['admin', 'owner'],
+	owner: ['owner']
 }

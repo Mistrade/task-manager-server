@@ -28,9 +28,10 @@ export const CommentSchema = new Schema({
 	userId: {
 		type: Schema.Types.ObjectId,
 		required: true,
-		autopopulate: true,
+		autopopulate: {
+			select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+		},
 		ref: "User",
-		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
 	},
 	sourceComment: {type: Schema.Types.ObjectId, ref: "Comment", autopopulate: true, default: null},
 	date: {type: Date, required: true, default: () => utcDate()},

@@ -49,18 +49,12 @@ export const EventsHandler: EventHandlerObject = {
 			const {user, body} = req
 			
 			const eventHelper = new EventHelper(user)
-			const removeResult = await eventHelper.remove({
+			await eventHelper.remove({
 				_id: body.eventId
 			})
 			
-			if (!removeResult.result) {
-				throw new ResponseException(
-					ResponseException.createObject(500, 'error', 'Не удалось полностью выполнить процедуру удаления события')
-				)
-			}
-			
 			const result = new ResponseException(
-				ResponseException.createSuccessObject(null)
+				ResponseException.createSuccessObject(null, 'Событие, комментарии и история события были успешно удалены')
 			)
 			
 			return res.status(result.status).json(result.json)

@@ -9,7 +9,7 @@ export class ApiErrorHandler extends Error {
 	}
 	
 	static UnauthorizedError() {
-		return new ApiErrorHandler(401, 'Для доступа к данному ресурсу пользователь должен быть авторизован')
+		return new ApiErrorHandler(403, 'Для доступа к данному ресурсу пользователь должен быть авторизован')
 	}
 	
 	static BadRequest(message: string, errors: Array<string> = []) {

@@ -138,16 +138,23 @@ export class EventsStorageHelper {
 	}
 	
 	public buildEventsScheme<BuildType extends EventBuildTypes>(
-		arr: Array<ReturnEventTypeAfterBuild<BuildType>>
+		arr: Array<ReturnEventTypeAfterBuild<BuildType>>,
+		utcOffset: number
 	): EventSchemeResponse {
 		let result: EventSchemeResponse = {}
 		
+		console.log('смешение utc: ', utcOffset)
+		
 		arr.forEach((event) => {
-			const start = dayjs(event.time)
-			const end = dayjs(event.timeEnd)
+			const start = this.utcOffsetDate(event.time, utcOffset)
+			const end = this.utcOffsetDate(event.timeEnd, utcOffset)
+			
+			console.log('инфо о событии: ')
+			console.log('start: ', 'before - ', event.time, ', after - ', start.toDate())
+			console.log('end: ', 'before - ', event.timeEnd, ', after - ', end.toDate())
 			
 			if (start.isSame(end, 'date')) {
-				const date: string = dayjs(event.time).format('DD-MM-YYYY')
+				const date: string = start.format('DD-MM-YYYY')
 				result[date] = true
 				return
 			}

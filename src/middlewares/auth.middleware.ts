@@ -49,6 +49,8 @@ export async function AuthMiddleware(req: AuthRequest, res: express.Response<Err
 			token: req.cookies['accessToken'],
 		})
 		
+		console.log(session)
+		
 		if (!session) {
 			//TODO тут нужно проверять refreshToken и если он валидный - создавать новую сессию
 			return res.status(404).json({

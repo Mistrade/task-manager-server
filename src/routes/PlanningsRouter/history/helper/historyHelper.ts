@@ -99,7 +99,7 @@ export class HistoryHelper {
 			_id: eventId
 		})
 		
-		await eventApi.checkUserRootsInEvent(
+		await eventApi.checkUserRootsAndBuild(
 			event,
 			'editor',
 			'none',
@@ -113,7 +113,7 @@ export class HistoryHelper {
 				{isPrivate: false}
 			],
 			...(filters || {})
-		})
+		}, {}, {sort: {date: -1}})
 		
 		return eventHistoryList?.map(this.buildResultHistoryItem) || []
 	}

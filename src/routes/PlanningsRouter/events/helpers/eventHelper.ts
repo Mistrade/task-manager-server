@@ -16,6 +16,7 @@ import {EventBuildHelper} from "./eventBuildHelper";
 import {RequestEventFilters, ReturnEventTypeAfterBuild} from "../../info/types";
 import {EventModelFilters} from "../../types";
 import {Comment} from "../../../../mongo/models/Comment";
+import {CommentsHelper} from "../../comments/helpers/commentsHelper";
 
 
 export class EventHelper extends EventBuildHelper {
@@ -32,6 +33,7 @@ export class EventHelper extends EventBuildHelper {
 		filters: EventModelFilters,
 		populated?: Array<PopulateOptions>
 	): Promise<HydratedDocument<EventType>> {
+		console.log('filters: ', JSON.stringify(filters))
 		const event: HydratedDocument<EventType> | null = await EventModel
 			.findOne(filters)
 			.populate(populated || []) as unknown as HydratedDocument<EventType>
@@ -110,13 +112,13 @@ export class EventHelper extends EventBuildHelper {
 		
 		let {
 			//Входные данные, которые прилетают на запрос
-			title, timeEnd, time, status, link, linkedFrom, type, groupId, parentId, priority, description, members
+			title, timeEnd, time, status, link, linkedFrom, type, group, parentId, priority, description, members
 		} = data
 		
 		//Создаю экземпляр помощника в работе с группами
 		const groupHelper = new GroupHelper(this.user)
 		//Вызываю метод resolveGroup, который найдет группу по groupId значению или вернет group.type = "Main" из БД, если по groupId найти не удалось
-		const group = await groupHelper.resolveGroup(groupId)
+		const groupApi = await groupHelper.resolveGroup(group)
 		
 		//Проверяю стартовую дату, тк она обязательна
 		const startTime = EventInfoHelper.checkDate(time)
@@ -208,7 +210,7 @@ export class EventHelper extends EventBuildHelper {
 			.create({
 				linkedFrom: linkedFromEvent?._id || null, //id события донора (от которого клонируем)
 				parentId: parentEvent?._id || null, //id родительского события
-				group: group._id, //id группы событий
+				group: groupApi._id, //id группы событий
 				title, //заголовок
 				status, //статус
 				priority, //приоритет
@@ -325,61 +327,48 @@ export class EventHelper extends EventBuildHelper {
 		return createdEvent
 	}
 	
-	public async remove(filters?: EventModelFilters): Promise<EventHelper & { result: boolean }> {
+	public async remove(filters?: EventModelFilters): Promise<void> {
 		//Логика метода
-		//1. - Ищу в базе события, которые потенциально могут быть удалены
-		//2. - Если события не найдены или произошла ошибка и вместо массива вернулось null - возвращаю количество удаленных событий 0
-		//3. - Формирую массив Id событий, в которых текущий пользователь - создатель
-		//3.1 - Проверяю, что массив с Id событиями не пустой
-		//4. - Удаляю события
-		//5. - Удаляю историю
+		//- Ищу в базе события, которые потенциально могут быть удалены.
+		//- Если события не найдены или произошла ошибка и вместо массива вернулось null - возвращаю количество удаленных событий 0.
+		//- Формирую массив Id событий, в которых текущий пользователь - создатель.
+		//- Проверяю, что массив с Id событиями не пустой.
+		//- Удаляю события.
+		//- Удаляю комментарии.
+		//- Удаляю историю.
 		
 		
-		//1.
 		const eventsForRemove: Array<HydratedDocument<EventModelType>> | null = await EventModel.find({
 			...filters,
 			userId: this.user._id
 		})
 		
-		//2.
 		if (!eventsForRemove || eventsForRemove.length === 0) {
-			return {
-				...this,
-				result: false
-			}
+			throw new ResponseException(
+				ResponseException.createObject(404, 'error', 'Не найдены события для удаления')
+			)
 		}
 		
-		//3.
 		const onlyCreatorEventsIdList = eventsForRemove
 			.filter((event) => this.isCreator(event))
 			.map((event) => event._id)
 		
 		if (onlyCreatorEventsIdList.length === 0) {
-			return {
-				...this,
-				result: false,
-			}
+			throw new ResponseException(
+				ResponseException.createObject(403, 'error', 'Вы не можете удалить эти события')
+			)
 		}
 		
-		//4.
+		const commentApi = new CommentsHelper(this.user)
+		await commentApi.removeCommentsByEventId(onlyCreatorEventsIdList, true)
+		
+		const historyHelper = new HistoryHelper(this.user)
+		await historyHelper.removeHistoryByEventId(onlyCreatorEventsIdList)
+		
 		await EventModel.deleteMany({
 			_id: {$in: onlyCreatorEventsIdList},
 			userId: this.user._id
 		})
-		
-		await Comment.deleteMany({
-			eventId: {$in: onlyCreatorEventsIdList}
-		})
-		
-		//5.
-		const historyHelper = new HistoryHelper(this.user)
-		await historyHelper.removeHistoryByEventId(onlyCreatorEventsIdList)
-		
-		
-		return {
-			...this,
-			result: true
-		}
 	}
 	
 	/** @name getShortEventsArray
@@ -399,6 +388,10 @@ export class EventHelper extends EventBuildHelper {
 		//Вызываю метод от наследованных классов, который сформирует запрос к базе из фильтров, полученных на входе
 		const query = await this.buildQueryObjectFromFilters(filters)
 		
+		// console.log('запрос к базе по фильтрам: ')
+		// console.log('Входные параметры: ', JSON.stringify(filters))
+		// console.log('Параметры запроса: ', JSON.stringify(query, null, '\t'))
+		
 		//Если запрос сформировать не удалось
 		if (!query) {
 			//Отправляю исключение в обработчики catch
@@ -413,7 +406,7 @@ export class EventHelper extends EventBuildHelper {
 		
 		return await this.resolveEventsGroupAndBuild(
 			eventList,
-			filters.findOnlyInSelectedGroups ? 'viewer' : 'creator',
+			filters.findOnlyInSelectedGroups ? 'viewer' : 'owner',
 			'Invite',
 			'short'
 		)

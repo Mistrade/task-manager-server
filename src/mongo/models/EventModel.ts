@@ -83,7 +83,9 @@ export const EventSchema = new Schema({
 	userId: {
 		type: Schema.Types.ObjectId,
 		ref: 'User',
-		autopopulate: true,
+		autopopulate: {
+			select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+		},
 		required: true,
 		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
 	},

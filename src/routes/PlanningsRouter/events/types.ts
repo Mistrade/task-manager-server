@@ -17,7 +17,7 @@ export interface EventHandler_Create_RequestData {
 	timeEnd: string,
 	link: EventLinkItem | null,
 	description?: string,
-	groupId: Schema.Types.ObjectId,
+	group: Schema.Types.ObjectId,
 	linkedFrom?: Schema.Types.ObjectId,
 	parentId?: Schema.Types.ObjectId,
 	members?: Array<{_id: Schema.Types.ObjectId, accessRights: EventInviteAccessRights}>

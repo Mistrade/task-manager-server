@@ -18,6 +18,8 @@ export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
 			'viewer'
 		)
 		
+		console.log(JSON.stringify(event))
+		
 		let resultEvent: DefaultEventItemResponse = await eventHelper
 			.resolveEventsGroupAndBuild([event], 'viewer', 'Invite', 'default')
 			.then((r) => r[0])
@@ -88,6 +90,8 @@ export const getEventCounterOfStatuses: InfoHandlerObject['getEventCounterOfStat
 		let {user, body} = request
 		
 		const finder = new EventHelper(user)
+		//Перезаписываю eventStatus, чтобы не сужать поиск по статусам
+		body.taskStatus = undefined
 		
 		const eventsList = await finder.getShortEventsArray(body)
 		
@@ -114,7 +118,7 @@ export const getEventsScheme: InfoHandlerObject['getEventsScheme'] = async (requ
 		
 		const eventsList = await finder.getShortEventsArray(body)
 		
-		const scheme = finder.buildEventsScheme(eventsList)
+		const scheme = finder.buildEventsScheme(eventsList, body.utcOffset || 0)
 		
 		const {status, json} = new ResponseException(
 			ResponseException.createSuccessObject(scheme)

@@ -6,7 +6,7 @@ import {ResponseException} from "../../../../exceptions/ResponseException";
 import {EventsStorageHelper} from "./eventsStorageHelper";
 import {EventHelper} from "./eventHelper";
 import {DefaultEventItemResponse} from "../../info/types";
-import {EventInviteAccessRights} from "../../../../mongo/models/EventInvite";
+import {AccessRightsWithOwner, EventInviteAccessRights} from "../../../../mongo/models/EventInvite";
 import {minimalRootsMap} from "../../../../common/constants";
 
 export type CheckUserRootsReturnedTypes = 'response-item' | 'model-item' | 'none'
@@ -47,7 +47,7 @@ export class EventCheckingHelper extends EventsStorageHelper {
 		}
 	}
 	
-	/** @name checkUserRootsInEvent
+	/** @name checkUserRootsAndBuild
 	 * @this {user} - текущий пользователь
 	 * @access public
 	 * @summary Метод, проверяющий в объекте события права доступа текущего пользователя и возвращающий сборку события или исключение
@@ -67,12 +67,12 @@ export class EventCheckingHelper extends EventsStorageHelper {
 	 * @throws {ResponseException} - Исключение будет выброшено, если полученное событие можно приравнять к false
 	 * или если недостаточно прав доступа для минимальных в параметре minimalRoots
 	 */
-	public async checkUserRootsInEvent<T extends CheckUserRootsReturnedTypes>(
+	public checkUserRootsAndBuild<T extends CheckUserRootsReturnedTypes>(
 		event: EventModelType | null,
-		minimalRoots: EventInviteAccessRights,
+		minimalRoots: AccessRightsWithOwner,
 		returnType: T,
 		message?: string,
-	): Promise<CheckUserRootsReturned[T]> {
+	): CheckUserRootsReturned[T] {
 		//Если событие не получено - кидаю исключение
 		if (!event) {
 			throw new ResponseException(

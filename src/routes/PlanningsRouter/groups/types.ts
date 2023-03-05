@@ -8,8 +8,7 @@ export interface GetGroupListRequestProps {
 	exclude?: Array<GroupsModelType['type']>
 }
 
-export interface ChangeGroupSelectRequestProps {
-	groupId: Schema.Types.ObjectId,
+export interface ChangeGroupSelectRequestProps extends GroupIdObject {
 	state: boolean
 }
 
@@ -18,13 +17,16 @@ export interface CreateGroupProps {
 	color: string,
 }
 
-export interface UpdateGroupProps extends CreateGroupProps {
+export interface UpdateGroupProps extends CreateGroupProps, GroupIdObject {
+}
+
+export interface GroupIdObject {
 	groupId: Schema.Types.ObjectId
 }
 
 export interface GroupControllerObject {
 	getGroupInfoById(
-		request: AuthRequest<null, { groupId: Schema.Types.ObjectId }>,
+		request: AuthRequest<null, GroupIdObject>,
 		response: ApiResponse<GroupsModelType<UserModelResponse>>
 	): Promise<ApiResponse<GroupsModelType<UserModelResponse>>>,
 	
@@ -44,7 +46,7 @@ export interface GroupControllerObject {
 	): Promise<ApiResponse<GroupsModelResponse>>
 	
 	removeGroup(
-		request: AuthRequest<{groupId: Schema.Types.ObjectId}>,
+		request: AuthRequest<GroupIdObject>,
 		response: ApiResponse
 	): Promise<ApiResponse>
 	

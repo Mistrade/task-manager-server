@@ -217,9 +217,10 @@ const SnapshotRequiredSchema = new Schema(
 		user: {
 			type: Schema.Types.ObjectId,
 			ref: "User",
-			autopopulate: true,
+			autopopulate: {
+				select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+			},
 			required: true,
-			get: (v: UserModel | null) => v ? UserModelHelper.getPopulatedUserWithoutPassword(v) : null
 		},
 		originalEventId: {
 			type: Schema.Types.ObjectId,
@@ -280,7 +281,9 @@ const EventSnapshotSchema = new Schema()
 				type: Schema.Types.ObjectId,
 				ref: "User",
 				required: true,
-				autopopulate: true,
+				autopopulate: {
+					select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+				},
 			}],
 			default: [],
 		},
@@ -289,7 +292,9 @@ const EventSnapshotSchema = new Schema()
 				type: Schema.Types.ObjectId,
 				ref: "User",
 				required: true,
-				autopopulate: true,
+				autopopulate: {
+					select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+				},
 			}],
 			default: []
 		},
@@ -317,8 +322,9 @@ const EventHistorySchema = new Schema({
 		type: Schema.Types.ObjectId,
 		ref: 'User',
 		required: true,
-		autopopulate: true,
-		get: (v: UserModel) => UserModelHelper.getPopulatedUserWithoutPassword(v)
+		autopopulate: {
+			select: ['name', 'surname', 'phone', '_id', 'email', 'patronymic', 'created']
+		},
 	},
 	eventId: {
 		type: Schema.Types.ObjectId,

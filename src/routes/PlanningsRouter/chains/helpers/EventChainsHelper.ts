@@ -120,7 +120,7 @@ export class EventChainsHelper {
 		
 		const event: HydratedDocument<EventModelWithPopulatedChains> = await eventApi.getEventWithCheckRoots<EventModelWithPopulatedChains>(
 			{_id: eventId},
-			'creator',
+			'owner',
 			[
 				{path: "parentId"}, {path: "linkedFrom"}
 			]

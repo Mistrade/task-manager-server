@@ -7,6 +7,7 @@ import {UserModelHelper} from "../../../../mongo/helpers/User";
 import {UserModel} from "../../../../mongo/models/User";
 import {ChangeGroupSelectRequestProps, CreateGroupProps, GetGroupListRequestProps} from "../types";
 import {GroupValidateHelper} from "./groupValidateHelper";
+import {EventHelper} from "../../events/helpers/eventHelper";
 
 export type MongoFilters<T extends object> = {
 	[key in keyof T]?: T[key]
@@ -158,19 +159,41 @@ export class GroupHelper extends GroupValidateHelper {
 	}
 	
 	public async remove(groupId: Schema.Types.ObjectId): Promise<void> {
-		await GroupModel.deleteOne({
+		const groupItem = await GroupModel.findOne({
 			userId: this.user._id,
 			_id: groupId,
-			deletable: true,
+			deletable: true
+		})
+		
+		if (!groupItem) {
+			throw new ResponseException(
+				ResponseException.createObject(403, 'error', 'Вы не можете удалить эту группу событий')
+			)
+		}
+		
+		const eventApi = new EventHelper(this.user)
+		
+		const eventsInGroup = await eventApi.getEventList({
+			group: groupId
+		})
+		
+		if (eventsInGroup.length) {
+			await eventApi.remove({
+				group: groupId
+			})
+		}
+		
+		await GroupModel.deleteOne({
+			_id: groupId,
 		})
 	}
 	
-	public async updateGroupInfo(groupId: Schema.Types.ObjectId, props: CreateGroupProps){
+	public async updateGroupInfo(groupId: Schema.Types.ObjectId, props: CreateGroupProps) {
 		const {title, color} = props
 		
 		const validate = this.validateGroupTitle(title) && this.validateGroupColor(color)
 		
-		if(!validate){
+		if (!validate) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'error', 'Невалидное значение цвета или заголовка')
 			)
@@ -180,19 +203,19 @@ export class GroupHelper extends GroupValidateHelper {
 			_id: groupId
 		})
 		
-		if(!group){
+		if (!group) {
 			throw new ResponseException(
 				ResponseException.createObject(404, 'error', 'Группа событий для обновления не найдена')
 			)
 		}
 		
-		if(!group.editable){
+		if (!group.editable) {
 			throw new ResponseException(
 				ResponseException.createObject(403, 'error', 'Эту группу событий нельзя редактировать')
 			)
 		}
 		
-		if(group.title.trim() === title.trim() && group.color === color){
+		if (group.title.trim() === title.trim() && group.color === color) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'error', 'Изменений не выявлено')
 			)

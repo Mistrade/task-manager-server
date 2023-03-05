@@ -326,7 +326,8 @@ export class EventBuildHelper extends EventCheckingHelper {
 			isLiked: objectIdInArrayOfAnotherObjectId(this.user._id, event.likedUsers), //Находится ли событие в списке избранных
 			link: event.link, //Ссылка для подключения
 			group: GroupHelper.buildGroupItemForResponse(event.group), //Группа событий
-			description: event.description, //Описание события
+			description: event.description, //Описание события,
+			userId: UserModelHelper.getPopulatedUserWithoutPassword(event.userId)
 		}
 	}
 	
@@ -362,8 +363,8 @@ export class EventBuildHelper extends EventCheckingHelper {
 			invites: event.invites //Список приглашений
 				.map((i) => i.inviteId?._id || null)
 				.filter((i): i is Schema.Types.ObjectId => i !== null),
-			acceptedStatus: isCreator ? 'accepted' : (invite?.inviteId?.acceptedStatus || "not_accepted"), //Статус принятия события приглашенным пользователем
-			accessRights: isCreator ? 'admin' : (invite?.inviteId?.accessRights || "viewer") //Права доступа текущего юзера к событию
+			acceptedStatus: isCreator ? undefined : (invite?.inviteId?.acceptedStatus || "not_accepted"), //Статус принятия события приглашенным пользователем
+			accessRights: isCreator ? 'owner' : invite?.inviteId?.accessRights //Права доступа текущего юзера к событию
 		}
 	}
 	
@@ -391,18 +392,18 @@ export class EventBuildHelper extends EventCheckingHelper {
 	
 	/**@name buildMinimalRootsFilter
 	 * @description Метод, формирующий параметры запроса к базе, на основе прав доступа
-	 * @param roots - минимальные права доступа
+	 * @param minimalRoots - минимальные права доступа
 	 * @return {AnyObject}
 	 * @since 25.02.2023
 	 */
-	public buildMinimalRootsFilter(roots: RootsFilterType): AnyObject {
+	public buildMinimalRootsFilter(minimalRoots: RootsFilterType): AnyObject {
 		
 		const creator = {
 			userId: this.user._id
 		}
 		
-		switch (roots) {
-			case "creator":
+		switch (minimalRoots) {
+			case "owner":
 				return creator
 			case "viewer":
 				//Если минимальные права - только просмотр, то:
@@ -412,7 +413,7 @@ export class EventBuildHelper extends EventCheckingHelper {
 						creator,
 						{
 							"invites.userId": this.user._id,
-							"invites.inviteId.accessRights": {$in: minimalRootsMap.viewer}
+							// "invites.inviteId.accessRights": {$in: minimalRootsMap.viewer}
 						}
 					]
 				}
@@ -424,9 +425,9 @@ export class EventBuildHelper extends EventCheckingHelper {
 						creator,
 						{
 							"invites.userId": this.user._id,
-							"invites.inviteId.accessRights": {
-								$in: minimalRootsMap.editor
-							}
+							// "invites.inviteId.accessRights": {
+							// 	$in: minimalRootsMap.editor
+							// }
 						}
 					]
 				}
@@ -438,9 +439,9 @@ export class EventBuildHelper extends EventCheckingHelper {
 						creator,
 						{
 							"invites.userId": this.user._id,
-							"invites.inviteId.accessRights": {
-								$in: minimalRootsMap.admin
-							}
+							// "invites.inviteId.accessRights": {
+							// 	$in: minimalRootsMap.admin
+							// }
 						}
 					]
 				}
@@ -531,7 +532,7 @@ export class EventBuildHelper extends EventCheckingHelper {
 		}
 		
 		//Если минимальные права - создатель
-		if (minimalRoots === 'creator') {
+		if (minimalRoots === 'owner') {
 			return arr
 				//Фильтрую массив полученных событий, оставляю только те, где пользователь - создатель
 				.filter((event) => this.isCreator(event))
