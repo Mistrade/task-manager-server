@@ -4,9 +4,11 @@ import {Comment, CommentModel} from "../../../../mongo/models/Comment";
 import {objectIdIsEquals} from "../../../../common/common";
 import {EventModel, EventModelType} from "../../../../mongo/models/EventModel";
 import {HydratedDocument, Schema} from "mongoose";
-import {CreateCommentProps} from "../types";
+import {CommentResponseModel, CreateCommentProps} from "../types";
 import {EventHelper} from "../../events/helpers/eventHelper";
 import {ResponseException} from "../../../../exceptions/ResponseException";
+import {AccessRightsWithOwner} from "../../../../mongo/models/EventInvite";
+import {DefaultEventItemResponse} from "../../info/types";
 
 export class CommentsHelper {
 	public user: UserModelResponse
@@ -20,8 +22,20 @@ export class CommentsHelper {
 		return length > 0 && length < 3000
 	}
 	
-	private buildCommentItem() {
-	
+	private buildCommentItem(comment: CommentModel, buildEvent: DefaultEventItemResponse): CommentResponseModel {
+		const isCommentCreator = objectIdIsEquals(comment.userId._id, this.user._id)
+		
+		return {
+			date: comment.date,
+			deletable: buildEvent.accessRights === 'owner' || isCommentCreator || false,
+			editable: isCommentCreator,
+			isImportant: false,
+			eventId: comment._id,
+			userId: comment.userId,
+			message: comment.message,
+			sourceComment: comment.sourceComment,
+			_id: comment._id
+		}
 	}
 	
 	private canIDelete(comment: CommentModel, eventCreator: Schema.Types.ObjectId) {
@@ -137,7 +151,7 @@ export class CommentsHelper {
 		})
 	}
 	
-	public async getCommentsByEventId(eventId: Schema.Types.ObjectId): Promise<Array<CommentModel>> {
+	public async getCommentsByEventId(eventId: Schema.Types.ObjectId): Promise<Array<CommentResponseModel>> {
 		if (!eventId) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'error', 'На вход ожидался id события')
@@ -148,7 +162,7 @@ export class CommentsHelper {
 		
 		const event = await eventApi.getEvent({_id: eventId})
 		
-		eventApi.checkUserRootsAndBuild(
+		const buildEvent = eventApi.checkUserRootsAndBuild(
 			event,
 			'viewer',
 			'response-item',
@@ -163,7 +177,7 @@ export class CommentsHelper {
 			)
 		}
 		
-		return comments
+		return comments.map((item) => this.buildCommentItem(item, buildEvent))
 	}
 	
 	public async removeCommentsByEventId(eventId: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>, disableCheckRoots: boolean = false): Promise<boolean> {

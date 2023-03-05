@@ -9,6 +9,12 @@ export interface CreateCommentProps {
 	sourceCommentId?: Schema.Types.ObjectId | null
 }
 
+export interface CommentResponseModel extends CommentModel {
+	editable: boolean,
+	deletable: boolean,
+	isImportant: boolean
+}
+
 export interface RemoveCommentProps {
 	commentId: Schema.Types.ObjectId
 }
@@ -30,6 +36,6 @@ export interface CommentsControllerObject {
 	
 	getCommentListByEventId(
 		request: AuthRequest<null, GetCommentListProps>,
-		response: ApiResponse<Array<CommentModel>>
-	): Promise<ApiResponse<Array<CommentModel>>>
+		response: ApiResponse<Array<CommentResponseModel>>
+	): Promise<ApiResponse<Array<CommentResponseModel>>>
 }
