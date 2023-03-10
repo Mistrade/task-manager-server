@@ -100,6 +100,8 @@ export type ExcludeEventHistoryFieldNames = '_id'
 //Обязательные ключи для заполнения
 export type EventHistoryRequiredFields = Omit<CreateSnapshotDefaultFields, '_id'>
 
+export type EventHistoryBaseSnapshot = EventHistoryRequiredFields & EventSnapshotCreateOptionalType
+
 //Поля объекта истории, по которым могут быть внесены записи об обновлении
 export type EventHistoryEditableFieldNames = keyof Omit<EventSnapshotCreatedFullType, ExcludeEventHistoryFieldNames>
 
@@ -161,31 +163,31 @@ export interface QuerySnapshotRequiredFields {
 
 //Интерфейс объекта истории, который возвращается из базы с заполнением полей, содержащий только необязательные поля
 export interface QuerySnapshotOptionalFields {
-	//Календарь, за которым закреплено событие
+//Календарь, за которым закреплено событие
 	group?: GroupsModelType | null,
-	//Описание
+//Описание
 	description?: string,
-	//Список событий, которые были добавлены как дочерние
+//Список событий, которые были добавлены как дочерние
 	insertChildOfEvents?: Array<QuerySnapshotRequiredFields | null>,
-	//Список событий, которые были удалены из дочерних
+//Список событий, которые были удалены из дочерних
 	removeChildOfEvents?: Array<QuerySnapshotRequiredFields | null>,
-	//Список пользователей, добавленных к событию
+//Список пользователей, добавленных к событию
 	sendInvites?: Array<UserModelResponse | null>,
-	//Список пользователей, которые были удалены из события
+//Список пользователей, которые были удалены из события
 	closeInvites?: Array<UserModelResponse | null>,
-	//Ссылка события
+//Ссылка события
 	link?: EventLinkItem | null,
-	//Родительское событие
+//Родительское событие
 	parentEvent?: QuerySnapshotRequiredFields | null,
-	//Событие, от которого производилось клонирование
+//Событие, от которого производилось клонирование
 	linkedFrom?: QuerySnapshotRequiredFields | null,
-	//Время начала события
+//Время начала события
 	time?: Date | null,
-	//Время завершения события
+//Время завершения события
 	timeEnd?: Date | null,
-	//Тип события (пока не актуально)
+//Тип события (пока не актуально)
 	type?: string | null,
-	//Избранное событие или нет
+//Избранное событие или нет
 	isLiked?: boolean
 }
 

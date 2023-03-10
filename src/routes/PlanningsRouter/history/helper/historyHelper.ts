@@ -179,8 +179,8 @@ export class HistoryHelper {
 			status: event.status,
 			title: event.title,
 			originalEventId: event._id,
-			createdAt: utcDate(),
-			user: this.user._id
+			createdAt: event.createdAt,
+			user: event.userId._id
 		}
 	}
 	
@@ -205,7 +205,7 @@ export class HistoryHelper {
 	public buildHistoryItem<FieldName extends EventHistoryEditableFieldNames>(
 		fieldName: FieldName,
 		event: EventModelType,
-		data: Required<Pick<EventHistorySnapshot<FieldName>, FieldName>>,
+		data: Required<Pick<EventHistorySnapshot<FieldName>, FieldName>> & EventSnapshotCreateOptionalType,
 		options?: BuildHistoryItemOptions
 	): EventHistoryCreateType<EventHistoryEditableFieldNames> {
 		return {

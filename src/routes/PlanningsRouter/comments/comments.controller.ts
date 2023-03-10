@@ -82,3 +82,23 @@ export const toggleIsImportantComment: CommentsControllerObject['toggleIsLikedCo
 		return response.status(status).json(json)
 	}
 }
+
+export const updateComment: CommentsControllerObject['updateComment'] = async (request, response) => {
+	try {
+		const {user, body} = request
+		
+		const commentUpdApi = new UpdateCommentHelper(user)
+		
+		await commentUpdApi.updateCommentInfo(body)
+		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(null)
+		)
+		
+		return response.status(status).json(json)
+	} catch (e) {
+		console.error(`error in ${request.originalUrl}: `, e)
+		const {status, json} = CatchErrorHandler(e)
+		return response.status(status).json(json)
+	}
+}

@@ -103,6 +103,16 @@ export const EventSchema = new Schema({
 		}],
 		default: []
 	},
+	// //Уровень вложенности относительно связей parentFor, childFor
+	// levelInFamilyTree: {type: Number, required: true, default: 0},
+	// //Сюда записываю все дочерние события, которые мне нужно будет populate-ить
+	// parentFor: {
+	// 	type: [
+	// 		new Schema({
+	//
+	// 		})
+	// 	]
+	// },
 	group: {type: Schema.Types.ObjectId, ref: 'Group', required: true, autopopulate: true},
 	likedUsers: {
 		type: [{type: Schema.Types.ObjectId, ref: "User", required: true}],

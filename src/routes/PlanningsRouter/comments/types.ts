@@ -63,4 +63,9 @@ export interface CommentsControllerObject {
 		request: AuthRequest<UpdateCommentIsImportantState>,
 		response: ApiResponse
 	): Promise<ApiResponse>
+	
+	updateComment(
+		request: AuthRequest<UpdateCommentMessageState>,
+		response: ApiResponse
+	): Promise<ApiResponse>
 }

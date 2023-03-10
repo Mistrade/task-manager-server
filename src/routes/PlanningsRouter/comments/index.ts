@@ -3,7 +3,8 @@ import {
 	createCommentToEvent,
 	getCommentListByEventId,
 	removeComment,
-	toggleIsImportantComment
+	toggleIsImportantComment,
+	updateComment
 } from "./comments.controller";
 
 const router = express.Router()
@@ -12,6 +13,7 @@ const router = express.Router()
 
 router.post('/create', createCommentToEvent)
 router.post('/remove', removeComment)
+router.post('/update', updateComment)
 router.post('/update/isImportant', toggleIsImportantComment)
 router.get('/:eventId', getCommentListByEventId)
 

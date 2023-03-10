@@ -11,7 +11,8 @@ import {HydratedDocument} from "mongoose";
 import {Comment, CommentModel} from "../../../../mongo/models/Comment";
 import {ResponseException} from "../../../../exceptions/ResponseException";
 import {EventHelper} from "../../events/helpers/eventHelper";
-import {objectIdIsEquals} from "../../../../common/common";
+import {objectIdIsEquals, utcDate} from "../../../../common/common";
+import dayjs from "dayjs";
 
 export class UpdateCommentHelper extends CommentsHelper {
 	public user: UserModelResponse
@@ -75,18 +76,41 @@ export class UpdateCommentHelper extends CommentsHelper {
 		await Comment.updateOne({_id: comment._id}, updateObject)
 	}
 	
-	private async updateCommentMessageAndSourceId(newState: UpdateCommentMessageState, comment: CommentModel): Promise<void> {
-		return
+	private async updateCommentMessageAndSourceId(newState: UpdateCommentMessageState): Promise<void> {
+		const {commentId, state} = newState
+		const {sourceCommentId, message} = state
+		
+		if (!message) {
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'Текст комментария не может быть пустым')
+			)
+		}
+		
+		await Comment.updateOne(
+			{_id: commentId},
+			{
+				sourceComment: sourceCommentId || null,
+				message,
+				updatedAt: utcDate()
+			}
+		)
+		
 	}
 	
 	public async updateCommentInfo(props: EditCommentRequestProps) {
 		const comment: HydratedDocument<CommentModel> = await this.getCommentById(props.commentId)
 		
+		if (!comment) {
+			throw new ResponseException(
+				ResponseException.createObject(404, 'error', 'Комментарий не найден')
+			)
+		}
+		
 		switch (props.fieldName) {
 			case "isImportant":
 				return await this.updateIsImportant(props, comment)
 			case "content":
-				return await this.updateCommentMessageAndSourceId(props, comment)
+				return await this.updateCommentMessageAndSourceId(props)
 			default:
 				throw new ResponseException(
 					ResponseException.createObject(400, 'error', 'Неизвестный тип вносимых изменений')

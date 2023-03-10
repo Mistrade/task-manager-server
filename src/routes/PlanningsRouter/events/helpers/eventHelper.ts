@@ -116,9 +116,9 @@ export class EventHelper extends EventBuildHelper {
 		} = data
 		
 		//Создаю экземпляр помощника в работе с группами
-		const groupHelper = new GroupHelper(this.user)
+		const groupApi = new GroupHelper(this.user)
 		//Вызываю метод resolveGroup, который найдет группу по groupId значению или вернет group.type = "Main" из БД, если по groupId найти не удалось
-		const groupApi = await groupHelper.resolveGroup(group)
+		const resolvedGroup = await groupApi.resolveGroup(group)
 		
 		//Проверяю стартовую дату, тк она обязательна
 		const startTime = EventInfoHelper.checkDate(time)
@@ -210,7 +210,7 @@ export class EventHelper extends EventBuildHelper {
 			.create({
 				linkedFrom: linkedFromEvent?._id || null, //id события донора (от которого клонируем)
 				parentId: parentEvent?._id || null, //id родительского события
-				group: groupApi._id, //id группы событий
+				group: resolvedGroup._id, //id группы событий
 				title, //заголовок
 				status, //статус
 				priority, //приоритет
@@ -237,7 +237,16 @@ export class EventHelper extends EventBuildHelper {
 		
 		//Добавляю в заранее созданный массив объект истории с ключом createdAt (событие создано)
 		toHistoryArray.push(history.buildHistoryItem('createdAt', createdEvent, {
-			createdAt: utcDate()
+			createdAt: createdEvent.createdAt,
+			time: utcDate(startTime),
+			timeEnd: utcDate(endTime),
+			description: description || '',
+			link,
+			group: resolvedGroup._id,
+			parentEvent: parentEvent?._id ? history.getSnapshotRequiredFields(parentEvent) : null,
+			linkedFrom: linkedFromEvent?._id ? history.getSnapshotRequiredFields(linkedFromEvent) : null,
+			//TODO доработать модель объекта истории, чтобы запись была не по userId, а по inviteId
+			// sendInvites: inviteUsers?.length && inviteUsers ? inviteUsers.map((u) => u._id) : []
 		}))
 		
 		//Если было событие донор
@@ -257,7 +266,7 @@ export class EventHelper extends EventBuildHelper {
 				//Первый объект - это запись в только что созданное событие о том, что событие привязано к родительскому
 				history.buildHistoryItem('parentEvent', createdEvent, {
 					parentEvent: history.getSnapshotRequiredFields(createdEvent)
-				}),
+				}, {customDescription: "Создана связь с родительским событием"}),
 				//Второй объект - это запись в родительское событие о том, что у него добавилось дочернее событие (только что созданное)
 				history.buildHistoryItem('insertChildOfEvents', parentEvent, {
 					insertChildOfEvents: [history.getSnapshotRequiredFields(createdEvent)]
