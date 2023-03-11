@@ -2,12 +2,13 @@ import cors from 'cors'
 import express from 'express'
 import cookieParser from "cookie-parser";
 import {RequestMiddleware} from "./middlewares/request.middleware";
-import {connect} from 'mongoose'
+import {connect, HydratedDocument} from 'mongoose'
 import {ApiRouter} from "./routes/ApiRouter/ApiRouter";
 import dayjs from "dayjs";
 import utc from 'dayjs/plugin/utc'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter'
+import {EventModel, EventModelType} from "./mongo/models/EventModel";
 
 dayjs.extend(utc)
 dayjs.extend(isSameOrBefore)
@@ -52,4 +53,3 @@ start(1)
 	.catch(e => start(2))
 	.catch(e => start(3))
 	.catch(() => console.log('После 3 попыток запуска, запустить сервер не удалось'))
-

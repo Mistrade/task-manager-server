@@ -75,7 +75,6 @@ export async function AuthMiddleware(req: AuthRequest, res: express.Response<Err
 			created: utcString(user.created),
 			phone: user.phone,
 		}
-		
 	}
 	
 	next('route')

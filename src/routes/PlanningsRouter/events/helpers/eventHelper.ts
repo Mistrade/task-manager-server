@@ -171,7 +171,7 @@ export class EventHelper extends EventBuildHelper {
 				//Создатель текущего события должен быть или участником или создателем родительского
 				const result = await this.getEventWithCheckRoots({
 					_id: parentId
-				})
+				}, 'any')
 				
 				//Если событие найдено, записываю его, по умолчанию - null
 				parentEvent = result || null
@@ -192,7 +192,7 @@ export class EventHelper extends EventBuildHelper {
 				//Создатель текущего события должен быть или участником или создателем родительского
 				const result = await this.getEventWithCheckRoots({
 					_id: linkedFrom
-				})
+				}, 'any')
 				
 				//Если событие найдено, записываю его, по умолчанию - null
 				linkedFromEvent = result || null
@@ -222,6 +222,8 @@ export class EventHelper extends EventBuildHelper {
 				userId: this.user._id, //создатель события
 				description: description || '', //описание
 				lastChange: utcDate(), //последнее изменение - только что, в формате utc
+				levelInFamilyTree: parentEvent && parentEvent?.levelInFamilyTree ? parentEvent.levelInFamilyTree + 1 : 0,
+				parentFor: [],
 			})
 		
 		//Если мне не вернулся id создаваемого события, то
@@ -232,44 +234,57 @@ export class EventHelper extends EventBuildHelper {
 			)
 		}
 		
-		//Создаю экземпляр помощника для работы с history API
-		const history = new HistoryHelper(this.user)
+		//Создаю экземпляр помощника для работы с historyApi API
+		const historyApi = new HistoryHelper(this.user)
 		
 		//Добавляю в заранее созданный массив объект истории с ключом createdAt (событие создано)
-		toHistoryArray.push(history.buildHistoryItem('createdAt', createdEvent, {
-			createdAt: createdEvent.createdAt,
-			time: utcDate(startTime),
-			timeEnd: utcDate(endTime),
-			description: description || '',
-			link,
-			group: resolvedGroup._id,
-			parentEvent: parentEvent?._id ? history.getSnapshotRequiredFields(parentEvent) : null,
-			linkedFrom: linkedFromEvent?._id ? history.getSnapshotRequiredFields(linkedFromEvent) : null,
-			//TODO доработать модель объекта истории, чтобы запись была не по userId, а по inviteId
-			// sendInvites: inviteUsers?.length && inviteUsers ? inviteUsers.map((u) => u._id) : []
-		}))
+		toHistoryArray.push(
+			historyApi.buildHistoryItem(
+				'createdAt',
+				createdEvent,
+				{
+					createdAt: createdEvent.createdAt,
+					time: utcDate(startTime),
+					timeEnd: utcDate(endTime),
+					description: description || '',
+					link,
+					group: resolvedGroup._id,
+					parentEvent: parentEvent?._id ? historyApi.getSnapshotRequiredFields(parentEvent) : null,
+					linkedFrom: linkedFromEvent?._id ? historyApi.getSnapshotRequiredFields(linkedFromEvent) : null,
+				}
+			)
+		)
 		
 		//Если было событие донор
 		if (linkedFromEvent) {
 			//Добавляю запись к только что созданному событию о том, что событие было клонировано
 			toHistoryArray.push(
-				history.buildHistoryItem('linkedFrom', createdEvent, {
-					linkedFrom: history.getSnapshotRequiredFields(linkedFromEvent)
+				historyApi.buildHistoryItem('linkedFrom', createdEvent, {
+					linkedFrom: historyApi.getSnapshotRequiredFields(linkedFromEvent)
 				})
 			)
 		}
 		
 		//Если было родительского событие
 		if (parentEvent) {
+			await EventModel.updateOne({
+				_id: parentEvent.id
+			}, {
+				$push: {
+					parentFor: createdEvent._id
+				}
+			})
+			
+			
 			//Добавляю в массив истории 2 объекта
 			toHistoryArray.push(
 				//Первый объект - это запись в только что созданное событие о том, что событие привязано к родительскому
-				history.buildHistoryItem('parentEvent', createdEvent, {
-					parentEvent: history.getSnapshotRequiredFields(createdEvent)
+				historyApi.buildHistoryItem('parentEvent', createdEvent, {
+					parentEvent: historyApi.getSnapshotRequiredFields(createdEvent)
 				}, {customDescription: "Создана связь с родительским событием"}),
 				//Второй объект - это запись в родительское событие о том, что у него добавилось дочернее событие (только что созданное)
-				history.buildHistoryItem('insertChildOfEvents', parentEvent, {
-					insertChildOfEvents: [history.getSnapshotRequiredFields(createdEvent)]
+				historyApi.buildHistoryItem('insertChildOfEvents', parentEvent, {
+					insertChildOfEvents: [historyApi.getSnapshotRequiredFields(createdEvent)]
 				})
 			)
 		}
@@ -296,8 +311,8 @@ export class EventHelper extends EventBuildHelper {
 			
 			//Если после записи инвайтов вернулся null или длина массива документов равна 0, то:
 			if (!result || !result.length) {
-				//Записываю накопленные history items
-				await history.addToHistory(toHistoryArray)
+				//Записываю накопленные historyApi items
+				await historyApi.addToHistory(toHistoryArray)
 				
 				//Выкидываю исключение с ошибкой
 				throw new ResponseException(
@@ -322,7 +337,7 @@ export class EventHelper extends EventBuildHelper {
 			
 			//Добавляю запись в историю с типом sendInvites (отправленные приглашения)
 			toHistoryArray.push(
-				history.buildHistoryItem('sendInvites', createdEvent, {
+				historyApi.buildHistoryItem('sendInvites', createdEvent, {
 					sendInvites: invitesUserId.map((item) => item.userId)
 				})
 			)
@@ -330,7 +345,7 @@ export class EventHelper extends EventBuildHelper {
 		}
 		
 		//Записываю сформированный массив в БД истории
-		await history.addToHistory(toHistoryArray)
+		await historyApi.addToHistory(toHistoryArray)
 		
 		//Если запись истории прошла успешно - возвращаю только что созданное событие из базы (получил его во время создания)
 		return createdEvent

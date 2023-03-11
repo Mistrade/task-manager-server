@@ -27,6 +27,8 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	userId: 'Изменен владелец события',
 	likedUsers: 'Добавлено/Удалено в(из) избранно(е|го)',
 	invites: "",
+	levelInFamilyTree: "",
+	parentFor: '',
 }
 
 export const UpdateTaskDescription: { [key in UpdateEventMapTypes['field']]: string } = {

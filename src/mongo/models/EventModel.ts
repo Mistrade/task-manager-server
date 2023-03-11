@@ -45,7 +45,9 @@ export interface DbEventModel {
 	likedUsers: Array<Schema.Types.ObjectId>,
 	createdAt: Date,
 	updatedAt: Date,
-	invites: Array<EventModelInvitesObject>
+	invites: Array<EventModelInvitesObject>,
+	levelInFamilyTree: number,
+	parentFor: Array<Schema.Types.ObjectId>
 }
 
 export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
@@ -57,6 +59,10 @@ export interface EventModelType extends Omit<DbEventModel, 'userId' | 'group' | 
 	userId: UserModel,
 	group: GroupsModelType | null,
 	invites: Array<EventModelInvitesObject<Omit<EventInviteQueryType, 'event' | 'createdAt' | 'updatedAt'>>>
+}
+
+export interface EventModelTypeWithParentTrees extends Omit<EventModelType, 'parentId'> {
+	parentId: null | EventModelTypeWithParentTrees | Schema.Types.ObjectId
 }
 
 export interface EventModelWithPopulatedChains extends Omit<EventModelType, 'linkedFrom' | 'parentId'> {
@@ -103,16 +109,13 @@ export const EventSchema = new Schema({
 		}],
 		default: []
 	},
-	// //Уровень вложенности относительно связей parentFor, childFor
-	// levelInFamilyTree: {type: Number, required: true, default: 0},
-	// //Сюда записываю все дочерние события, которые мне нужно будет populate-ить
-	// parentFor: {
-	// 	type: [
-	// 		new Schema({
-	//
-	// 		})
-	// 	]
-	// },
+	//Уровень вложенности относительно связей parentFor, childFor
+	levelInFamilyTree: {type: Number, required: true, default: 0},
+	//Сюда записываю все дочерние события, которые мне нужно будет populate-ить
+	parentFor: {
+		type: [{type: Schema.Types.ObjectId, required: true, ref: "Event"}],
+		default: [],
+	},
 	group: {type: Schema.Types.ObjectId, ref: 'Group', required: true, autopopulate: true},
 	likedUsers: {
 		type: [{type: Schema.Types.ObjectId, ref: "User", required: true}],

@@ -2,7 +2,7 @@ import {AddEventChildOfProps} from "../../types";
 import {
 	DbEventChildOfItemSchemaType,
 	EventModel,
-	EventModelType,
+	EventModelType, EventModelTypeWithParentTrees,
 	EventModelWithPopulatedChains
 } from "../../../../mongo/models/EventModel";
 import {eventSnapshot, utcDate} from "../../../../common/common";
@@ -159,5 +159,33 @@ export class EventChainsHelper {
 		
 		return obj
 	}
+
+	//
+	// private parseParentEvents(event: EventModelTypeWithParentTrees) {
+	// 		if(!event.parentId){
+	// 			return null
+	// 		}
+	//
+	// 		if('parentId' in event){
+	// 			// event
+	// 		}
+	// }
 	
+	// private async getAllParentEvents(eventId: Schema.Types.ObjectId): Promise<Array<EventModelType>> {
+	// 		if(!eventId){
+	// 			throw new ResponseException(
+	// 				ResponseException.createObject(400, 'error', 'На вход ожидался Id события')
+	// 			)
+	// 		}
+	//
+	// 		const event: HydratedDocument<EventModelTypeWithParentTrees> | null = await EventModel.findOne({
+	// 			_id: eventId
+	// 		}).populate('parentId')
+	//
+	// 		if(!event){
+	// 			return []
+	// 		}
+	//
+	//
+	// }
 }
