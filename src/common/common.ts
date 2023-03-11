@@ -29,6 +29,7 @@ export const HistoryDescription: HistoryDescriptionObject = {
 	invites: "",
 	levelInFamilyTree: "",
 	parentFor: '',
+	treeId: '',
 }
 
 export const UpdateTaskDescription: { [key in UpdateEventMapTypes['field']]: string } = {

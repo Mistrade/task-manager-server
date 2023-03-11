@@ -344,6 +344,7 @@ export class EventBuildHelper extends EventCheckingHelper {
 		const isCreator = objectIdIsEquals(this.user._id, event.userId._id)
 		
 		return {
+			treeId: event.treeId,
 			_id: event._id, //id события
 			title: event.title, //заголовок
 			time: utcString(event.time), //начало события

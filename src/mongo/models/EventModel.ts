@@ -47,7 +47,8 @@ export interface DbEventModel {
 	updatedAt: Date,
 	invites: Array<EventModelInvitesObject>,
 	levelInFamilyTree: number,
-	parentFor: Array<Schema.Types.ObjectId>
+	parentFor: Array<Schema.Types.ObjectId>,
+	treeId: string,
 }
 
 export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
@@ -78,6 +79,7 @@ export const LinkSchema = new Schema({
 export const EventSchema = new Schema({
 	title: {type: String, required: true}, //+
 	description: {type: String}, //+
+	treeId: {type: String, default: null},
 	link: {type: LinkSchema, required: false, default: null}, //+
 	linkedFrom: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null}, //+
 	parentId: {type: Schema.Types.ObjectId || undefined, ref: 'Event', default: null}, //+
