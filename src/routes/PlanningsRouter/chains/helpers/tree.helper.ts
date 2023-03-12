@@ -38,12 +38,11 @@ interface CanImPushChildEventFnReturned<State extends boolean = boolean> {
 	error?: CanImPushError
 }
 
-type ParentsObj<EventType = EventModelType> = {
-	[key: string]: NodeType<EventType>
-}
+type PathsObj<EventType> = { [key: string]: { parents: Array<string>, childs: Array<string> } }
 
 export class EventTree<InitialEventType extends ExtendableEventType = EventModelType> {
 	public eventTree: NodeType<InitialEventType> | null
+	public paths: PathsObj<InitialEventType> = {}
 	
 	constructor(arr: Array<InitialEventType>) {
 		this.eventTree = this.generateEventTree(arr)
@@ -53,62 +52,31 @@ export class EventTree<InitialEventType extends ExtendableEventType = EventModel
 		_parentId: string | null,
 		children: BeforeMergedChildrenArray<EventType>,
 		store: BeforeMergeObject<EventType>,
+		prevPath: Array<string>
 	): Array<NodeType<EventType>> {
+		const path = [...prevPath]
+		
 		return children.map((item) => {
 			const childrenItem: BeforeMergedChildrenArray<EventType> = store[item._id]
+			
+			this.paths[item._id] = {
+				parents: path,
+				childs: []
+			}
+			
+			path.forEach((parentPath) => {
+				this.paths[parentPath].childs.push(item._id)
+			})
 			
 			return {
 				_parentId,
 				_id: item._id,
 				event: item.event,
-				child: this.mergeChildren(item._id, childrenItem || [], store)
+				path,
+				child: this.mergeChildren(item._id, childrenItem || [], store, [...path, item._id])
 			}
 		})
 	}
-	
-	public returnNodePathById(id: string, node: NodeType<InitialEventType>): Array<NodeType<InitialEventType>> {
-		const path: Array<NodeType<InitialEventType>> = []
-		
-		if (node._id === id) {
-			return path
-		}
-		
-		node.child.forEach((nodeItem) => {
-			if (nodeItem._id === id) {
-				return path.push(node)
-			}
-			
-			const hasInChilds = this.returnNodePathById(id, nodeItem)
-			
-			if (hasInChilds?.length > 0) {
-				return path.push(node, ...hasInChilds)
-			}
-		})
-		
-		return path
-	}
-	
-	//
-	// private getAllParentsForEvent(eventId: Schema.Types.ObjectId): Array<Schema.Types.ObjectId> {
-	// 	const stringEventId = eventId.toString()
-	// 	const parents: ParentsObj<InitialEventType> = {}
-	//
-	// 	if (!this.eventTree) {
-	// 		throw new ResponseException(
-	// 			ResponseException.createObject(500, 'error', 'Не удалось построить дерево событий')
-	// 		)
-	// 	}
-	//
-	//
-	// }
-	
-	// public canImPushChildEvents(options: CanImPushChildEventOptions) {
-	// 	const {childEventId, parentEventId} = options
-	//
-	// 	const parents: Array<Schema.Types.ObjectId> = this.getAllParentsForEvent(parentEventId)
-	//
-	//
-	// }
 	
 	private generateEventTree<EventType extends ExtendableEventType = EventModelType>(
 		arr: Array<EventType>
@@ -150,11 +118,17 @@ export class EventTree<InitialEventType extends ExtendableEventType = EventModel
 		const rootId = root._id.toString()
 		const rootChildren = obj[rootId]
 		
+		this.paths[rootId] = {
+			parents: [],
+			childs: []
+		}
+		
+		
 		return {
 			_parentId: null,
 			_id: rootId,
 			event: root,
-			child: this.mergeChildren(rootId, rootChildren || [], obj)
+			child: this.mergeChildren(rootId, rootChildren || [], obj, [rootId])
 		}
 	}
 }

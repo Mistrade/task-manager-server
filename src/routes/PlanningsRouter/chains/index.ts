@@ -44,9 +44,7 @@ router.get('/get_tree', async (req, res, next) => {
 		.status(200)
 		.json({
 			tree: tree.eventTree,
-			path: tree.eventTree
-				? tree.returnNodePathById("63fc93505d2b2d4548c1f0df", tree.eventTree).map((node) => node._id)
-				: ['Хуй тебе']
+			path: tree.paths
 		})
 })
 router.get('/:eventId', getChainsByEventId) //chains
