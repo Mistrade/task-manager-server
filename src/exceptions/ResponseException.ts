@@ -9,11 +9,11 @@ export class ResponseException<T extends any = any> {
 		this.json = data.json
 	}
 	
-	public static createObject<T extends any = any>(status: number, type: ErrorTypes, message: string): ResponseException<T> {
+	public static createObject<T extends any = any>(status: number, type: ErrorTypes, message: string, data: T | null = null): ResponseException<T> {
 		return {
 			status,
 			json: {
-				data: null,
+				data: data,
 				info: {type, message}
 			}
 		}

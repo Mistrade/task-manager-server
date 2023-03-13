@@ -6,6 +6,11 @@ import {EventModel, EventModelType} from "../../../mongo/models/EventModel";
 import {EventHelper} from "../events/helpers/eventHelper";
 import {HydratedDocument, Schema} from "mongoose";
 import {EventTree} from "./helpers/tree.helper";
+import {TreeValidator} from "./helpers/tree.validator";
+import {response} from "express";
+import {EventTreeModel, EventTreeModelType} from "../../../mongo/models/EventTree";
+import {HistoryHelper} from "../history/helper/historyHelper";
+import {EventHistory} from "../../../mongo/models/EventHistory";
 
 export const getChainsByEventId: GetChainsByEventIdFn = async (request, response) => {
 	try {
@@ -30,13 +35,74 @@ export const getChainsByEventId: GetChainsByEventIdFn = async (request, response
 export const connectChildrenEvent: ConnectChildrenEventFn = async (req, res) => {
 	//Логика метода
 	
-	//Сначала - проверяй входные данные - есть они или нет
+	//Сначала - проверяй входные данные - есть они или нет.
+	//Проверяю ограничения.
 	//Если с входными данными все ок - ищу в базе родительское событие и добавляемые события (currentEvent и addedEvents соответственно)
 	//Проверяю что данные пришли.
-	//Фильтрую массив добавляемых событий на предмет наличия treeId, который не равен treeId родительского или его отсутствия.
-	//В данном случае наличие treeId - говорит о том, что событие лежит в каком-либо дереве событий
-	//Отсутствие treeId - говорит о том, что на событие нет запретов для добавления
-	//Полученный массив (который содержит только события) -
+	
+	//Возможные кейсы:
+	//1. У текущего события нет дерева и у всех добавляемых событий нет деревьев.
+	//2. У текущего события есть дерево и у всех добавляемых событий нет деревьев.
+	//3. У текущего события нет дерева и хотя бы одно добавляемое событие имеет дерево.
+	//4. У текущего события есть дерево, и хотя бы одно добавляемое событие имеет дерево, деревья не пересекаются
+	//7. У текущего события есть дерево, и одно или несколько добавляемых событий имеет дерево, при этом есть пересечения по деревьям между родителем и добавляемыми событиями
+	
+	//Решение:
+	
+	//1. У текущего события нет дерева и у всех добавляемых событий нет деревьев.
+	// Краткое описание:
+	// - Конфликтов может быть если текущее событие находится в добавляемых. Валидация нужна.
+	// Валидация:
+	// - Проверяю что в добавляемых событиях нет текущего события
+	// Действия:
+	// - Провожу валидацию.
+	// * Создаю дерево.
+	// * Отправляю запрос на обновление событий: [(treeId для всех), (parentId для дочерних)].
+	// * Формирую записи в историю.
+	
+	//2. У текущего события есть дерево и у всех добавляемых событий нет деревьев.
+	// Краткое описание:
+	// - Конфликтов нет. Валидация не нужна.
+	// Действия:
+	// * Отправляю запрос на обновление событий: treeId и parentId для дочерних.
+	// * Формирую записи в историю.
+	
+	//3. У текущего события нет дерева и хотя бы одно добавляемое событие имеет дерево.
+	// Краткое описание:
+	// - Конфликты могут быть, если текущее событие находится в добавляемых. Валидация нужна
+	// Валидация:
+	// - Проверяю, что в добавляемых событиях нет текущего события.
+	// Действия:
+	// - Провожу валидацию.
+	// * Получаю список событий, содержащиеся в деревьях, которые указаны в добавляемых событиях.
+	// * Пробегаюсь по всему списку полученных событий и формирую плоскую модель списка событий, содержавшихся в деревьях, типа {treeId: Array<EventsInTreeId>}.
+	// * Иду по добавляемым событиям и формирую плоскую модель деревьев. При формировании деревьев использую предыдущую модель, оттуда беру списки событий,
+	// 	 На каждой итерации из дерева вытаскиваю все дочерние события из объекта path.eventId.childs,
+	// 	 По итогу должен получиться массив из всех событий, которые нужно обновить, учитывая детей добавляемых событий.
+	// * Создаю дерево.
+	// * Отправляю запрос на обновление событий [(treeId для добавляемых и текущего), (parentId для добавляемых)]
+	// * Формирую записи в историю для текущего и полученных добавляемых событий (без учета детей добавляемых)
+	
+	//4 и 5. У текущего события есть дерево, и хотя бы одно добавляемое событие имеет дерево, деревья (не) пересекаются.
+	// Краткое описание:
+	// - Конфликты могут быть, если текущие событие находится в добавляемых
+	// * или у одного из добавляемых событий такой же treeId как у текущего. Валидация нужна.
+	// Валидация:
+	// - Проверяю, что в добавляемых событиях нет текущего события. (exception)
+	// * Проверяю, что нет пересечений между деревьями текущего события и добавляемых событий. (go_next)
+	// * Если пересечения есть, то в момент построения деревьев добавляемых событий нужно проверять пересечение деревьев
+	//   и если оно пересекается сравнивать конфликты у родителей текущего события и детей добавляемого события, включая само добавляемое событие
+	// Действия:
+	// * Провожу валидацию.
+	// * Получаю список событий, содержащиеся в деревья, которые указаны в добавляемых событиях.
+	// * Пробегаюсь по всему списку полученных событий и формирую плоскую модель списка событий, содержавшихся в деревьях, типа {treeId: Array<EventsInTreeId>}.
+	// * Иду по добавляемым событиям и формирую модель деревьев. При формировании деревьев использую предыдущую модель, оттуда беру списки событий,
+	// 	 На каждой итерации из дерева вытаскиваю все дочерние события из объекта path.eventId.childs и если в результате валидации были пересечения treeId,
+	// 	 то проверяю есть ли пересечения между родителями текущего события и событиями, которые лежат в path.eventId.childs.
+	// 	 Если пересечения есть возвращаю ошибку с id события, в которых были ошибки.
+	//   По итогу должен получиться массив из всех событий, которые нужно обновить, учитывая детей добавляемых событий.
+	// * Отправляю запрос на обновление событий [(treeId для добавляемых и текущего), (parentId для добавляемых)]
+	// * Формирую записи в историю для текущего и полученных добавляемых событий (без учета детей добавляемых)
 	
 	try {
 		let {user, body} = req
@@ -44,9 +110,27 @@ export const connectChildrenEvent: ConnectChildrenEventFn = async (req, res) => 
 		
 		const {eventId, eventsToAdd} = body
 		
-		if (!eventsToAdd || !eventsToAdd.length) {
+		if (!eventsToAdd || !eventsToAdd.length || !eventId) {
 			throw new ResponseException(
 				ResponseException.createObject(400, 'warning', 'Нечего добавлять. Выберите события, для которых необходимо установить childOf связь')
+			)
+		}
+		
+		if (eventsToAdd.length > 5) {
+			throw new ResponseException(
+				ResponseException.createObject(400, 'error', 'За одну транзакцию можно добавить не более 5 дочерних событий')
+			)
+		}
+		
+		const hasIntersection = eventsToAdd.filter((item) => item && item.toString() === eventId.toString())
+		
+		if (hasIntersection.length) {
+			throw new ResponseException(
+				ResponseException.createObject(
+					400,
+					'error',
+					'Вы пытаетесь добавить к событию в качестве дочернего само себя.',
+				)
 			)
 		}
 		
@@ -73,121 +157,39 @@ export const connectChildrenEvent: ConnectChildrenEventFn = async (req, res) => 
 			)
 		}
 		
-		const problemEventIds: { [key: string]: { _id: Schema.Types.ObjectId, description: string } } = {}
-		const uniquesTreeIds: Set<Schema.Types.ObjectId> = new Set()
+		const eventsForUpdate: Array<string> = await new TreeValidator(user)
+			.getAllEventsForUpdate(currentEvent, addedEvents)
+			.then((r) => r)
+			.catch((reason) => {
+				const err = CatchErrorHandler(reason)
+				throw new ResponseException(err)
+			})
 		
-		addedEvents.forEach((item) => item.treeId && uniquesTreeIds.add(item.treeId))
+		let treeId: Schema.Types.ObjectId = await TreeValidator.getTreeIdForUpdate(currentEvent.treeId, user)
+		const historyApi = new HistoryHelper(user)
 		
-		//Возможные кейсы:
-		//1. У текущего события нет дерева и у всех добавляемых событий нет деревьев.
-		//2. У текущего события есть дерево и у всех добавляемых событий нет деревьев.
-		//3. У текущего события нет дерева и хотя бы одно добавляемое событие имеет дерево.
-		//4. У текущего события есть дерево, и хотя бы одно добавляемое событие имеет дерево, деревья не пересекаются
-		//5. У текущего события нет дерева и все добавляемые события имеют дерево.
-		//6. У текущего события есть дерево, и все добавляемые события имеют дерево, деревья не пересекаются
-		//7. У текущего события есть дерево, и одно или несколько добавляемых событий имеет дерево, при этом есть пересечения по деревьям между родителем и добавляемыми событиями
+		const history = [
+			...addedEvents.map((item) => {
+				return historyApi.buildHistoryItem('parentEvent', item, {
+					parentEvent: historyApi.getSnapshotRequiredFields(currentEvent)
+				})
+			}),
+			historyApi.buildHistoryItem('insertChildOfEvents', currentEvent, {
+				insertChildOfEvents: addedEvents.map((item) => historyApi.getSnapshotRequiredFields(item))
+			})
+		]
 		
-		//Решение:
-		//1. Конфликтов нет. Валидация не нужна.
-		// Действия:
-		// * Создаю дерево.
-		// * Отправляю запрос на обновление событий: [(treeId для всех), (parentId для дочерних)].
-		// * Формирую записи в историю.
+		const resultEventsIds: Array<string> = [...eventsForUpdate, currentEvent._id.toString()]
 		
-		//2. Конфликтов нет. Валидация не нужна.
-		// Действия:
-		// * Отправляю запрос на обновление событий: treeId и parentId для дочерних.
-		// * Формирую записи в историю.
+		await EventModel.updateMany({_id: {$in: resultEventsIds}}, {treeId})
+		await EventModel.updateMany({_id: {$in: eventsForUpdate}}, {parentId: currentEvent._id})
+		await historyApi.addToHistory(history)
 		
+		const {status, json} = new ResponseException(
+			ResponseException.createSuccessObject(null)
+		)
 		
-		
-		// type StrongTrees = {
-		// 	[key in string]: {
-		// 		nodeId: string,
-		// 		tree: Pick<EventTree, 'eventTree' | 'paths'> | null
-		// 	}
-		// }
-		
-		
-		
-		// /////////
-		// if (!uniquesTreeIds.size) {
-		// 	//
-		// 	if(currentEvent.treeId){
-		// 		const currentTreeEvents =  await eventApi.getEventList({
-		// 			treeId: currentEvent.treeId,
-		// 			...eventApi.buildMinimalRootsFilter('owner')
-		// 		})
-		//
-		// 		if(!currentTreeEvents.length){
-		//
-		// 		}
-		//
-		// 		// const tree =
-		// 	}
-		// 	addedEvents.forEach(() => {
-		//
-		// 	})
-		// }
-		// /////////
-		//
-		// const allChildsEvent: Array<EventModelType> | null = await eventApi.getEventList({
-		// 	treeId: {$in: Array.from(uniquesTreeIds)},
-		// 	...eventApi.buildMinimalRootsFilter('owner'),
-		// })
-		//
-		// if (!allChildsEvent || !allChildsEvent.length) {
-		// 	throw new ResponseException(
-		// 		ResponseException.createObject(500, 'error', 'Не удалось найти события в базе данных, попробуйте еще раз или обратитесь в поддержку')
-		// 	)
-		// }
-		//
-		// type d2 = {
-		// 	[key: string]: Array<EventModelType>
-		// }
-		//
-		// const model: d2 = {}
-		//
-		// allChildsEvent.forEach((item) => {
-		// 	const treeId = item.treeId as Schema.Types.ObjectId
-		// 	const treeIdStr = treeId.toString()
-		//
-		// 	if (!model[treeIdStr]) {
-		// 		return model[treeIdStr] = [item]
-		// 	}
-		//
-		// 	return model[treeIdStr].push(item)
-		// })
-		//
-		//
-		// const trees: StrongTrees = {}
-		//
-		// addedEvents.forEach((item) => {
-		// 	const strItemId = item._id.toString()
-		// 	if (item.treeId) {
-		// 		const treeId = item.treeId as Schema.Types.ObjectId
-		// 		const treeIdStr = treeId.toString()
-		//
-		// 		if(trees[treeIdStr]){
-		// 			return trees[strItemId] =
-		// 		}
-		//
-		// 		const treeApi = new EventTree(model[treeIdStr])
-		//
-		// 		if (treeApi.eventTree) {
-		// 			return trees[strItemId] = treeApi
-		// 		}
-		//
-		// 		return problemEventIds[strItemId] = {
-		// 			_id: item._id,
-		// 			description: "Не удалось проверить наличие конфликтов, добавление запрещено"
-		// 		}
-		// 	}
-		//
-		// 	return trees[strItemId] = null
-		// })
-		
-		
+		return res.status(status).json(json)
 	} catch (e) {
 		console.log(`error in ${req.originalUrl}: `, e)
 		const {status, json} = CatchErrorHandler(e)

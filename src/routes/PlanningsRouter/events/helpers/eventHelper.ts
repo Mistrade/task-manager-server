@@ -222,8 +222,6 @@ export class EventHelper extends EventBuildHelper {
 				userId: this.user._id, //создатель события
 				description: description || '', //описание
 				lastChange: utcDate(), //последнее изменение - только что, в формате utc
-				levelInFamilyTree: parentEvent && parentEvent?.levelInFamilyTree ? parentEvent.levelInFamilyTree + 1 : 0,
-				parentFor: [],
 			})
 		
 		//Если мне не вернулся id создаваемого события, то

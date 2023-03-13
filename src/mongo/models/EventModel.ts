@@ -46,8 +46,6 @@ export interface DbEventModel {
 	createdAt: Date,
 	updatedAt: Date,
 	invites: Array<EventModelInvitesObject>,
-	levelInFamilyTree: number,
-	parentFor: Array<Schema.Types.ObjectId>,
 	treeId: Schema.Types.ObjectId | null,
 }
 
@@ -110,13 +108,6 @@ export const EventSchema = new Schema({
 			},
 		}],
 		default: []
-	},
-	//Уровень вложенности относительно связей parentFor, childFor
-	levelInFamilyTree: {type: Number, required: true, default: 0},
-	//Сюда записываю все дочерние события, которые мне нужно будет populate-ить
-	parentFor: {
-		type: [{type: Schema.Types.ObjectId, required: true, ref: "Event"}],
-		default: [],
 	},
 	group: {type: Schema.Types.ObjectId, ref: 'Group', required: true, autopopulate: true},
 	likedUsers: {

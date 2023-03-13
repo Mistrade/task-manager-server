@@ -50,10 +50,11 @@ interface PathsObjPropertyType<EventType> {
 
 export class EventTree<InitialEventType extends ExtendableEventType = EventModelType> {
 	public eventTree: NodeType<InitialEventType> | null
-	public paths: PathsObj<InitialEventType> = {}
+	public paths: PathsObj<InitialEventType>
 	
 	constructor(arr: Array<InitialEventType>) {
 		this.eventTree = this.generateEventTree(arr)
+		this.paths = {}
 	}
 	
 	//Это метод для углубления в дерево

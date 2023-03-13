@@ -2,6 +2,7 @@ import {ShortEventItemResponse} from "../info/types";
 import {Schema} from "mongoose";
 import {ApiResponse} from "../../types";
 import {AuthRequest} from "../types";
+import {ProblemEventsSchema} from "./helpers/tree.validator";
 
 export type GetChainsByEventIdFn = (
 	request: AuthRequest<null, { eventId: Schema.Types.ObjectId }>,
@@ -21,5 +22,5 @@ export interface ConnectChildrenRequestProps {
 
 export type ConnectChildrenEventFn = (
 	req: AuthRequest<ConnectChildrenRequestProps>,
-	response: ApiResponse
+	response: ApiResponse<{ problemEventIds: ProblemEventsSchema } | null>
 ) => Promise<ApiResponse>

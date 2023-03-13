@@ -366,8 +366,6 @@ export class EventBuildHelper extends EventCheckingHelper {
 				.filter((i): i is Schema.Types.ObjectId => i !== null),
 			acceptedStatus: isCreator ? undefined : (invite?.inviteId?.acceptedStatus || "not_accepted"), //Статус принятия события приглашенным пользователем
 			accessRights: isCreator ? 'owner' : invite?.inviteId?.accessRights, //Права доступа текущего юзера к событию,
-			levelInFamilyTree: event.levelInFamilyTree,
-			parentFor: event.parentFor,
 		}
 	}
 	
