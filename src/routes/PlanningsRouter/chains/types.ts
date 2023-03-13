@@ -13,3 +13,13 @@ export interface ResponseGetChainsByEventId {
 	linkedFrom: null | ShortEventItemResponse,
 	childrenEvents: Array<ShortEventItemResponse> | null
 }
+
+export interface ConnectChildrenRequestProps {
+	eventsToAdd: Array<Schema.Types.ObjectId>,
+	eventId: Schema.Types.ObjectId
+}
+
+export type ConnectChildrenEventFn = (
+	req: AuthRequest<ConnectChildrenRequestProps>,
+	response: ApiResponse
+) => Promise<ApiResponse>

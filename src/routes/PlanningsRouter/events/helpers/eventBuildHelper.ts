@@ -401,19 +401,19 @@ export class EventBuildHelper extends EventCheckingHelper {
 	 */
 	public buildMinimalRootsFilter(minimalRoots: RootsFilterType): AnyObject {
 		
-		const creator = {
+		const owner = {
 			userId: this.user._id
 		}
 		
 		switch (minimalRoots) {
 			case "owner":
-				return creator
+				return owner
 			case "viewer":
 				//Если минимальные права - только просмотр, то:
 				return {
 					//Ищу от создателя до приглашенных пользователей, у которых права - только просмотр
 					$or: [
-						creator,
+						owner,
 						{
 							"invites.userId": this.user._id,
 							// "invites.inviteId.accessRights": {$in: minimalRootsMap.viewer}
@@ -425,7 +425,7 @@ export class EventBuildHelper extends EventCheckingHelper {
 				return {
 					//Ищу права создателя, редактора, админа
 					$or: [
-						creator,
+						owner,
 						{
 							"invites.userId": this.user._id,
 							// "invites.inviteId.accessRights": {
@@ -439,7 +439,7 @@ export class EventBuildHelper extends EventCheckingHelper {
 				return {
 					//В выборку попадут только создатель и админ
 					$or: [
-						creator,
+						owner,
 						{
 							"invites.userId": this.user._id,
 							// "invites.inviteId.accessRights": {

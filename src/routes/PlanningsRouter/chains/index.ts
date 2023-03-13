@@ -47,6 +47,8 @@ router.get('/get_tree', async (req, res, next) => {
 			path: tree.paths
 		})
 })
+
+router.post('/connect/children', )
 router.get('/:eventId', getChainsByEventId) //chains
 
 export const ChainsRouter = router

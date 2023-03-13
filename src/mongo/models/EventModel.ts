@@ -48,7 +48,7 @@ export interface DbEventModel {
 	invites: Array<EventModelInvitesObject>,
 	levelInFamilyTree: number,
 	parentFor: Array<Schema.Types.ObjectId>,
-	treeId: string,
+	treeId: Schema.Types.ObjectId | null,
 }
 
 export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
