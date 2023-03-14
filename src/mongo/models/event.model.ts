@@ -1,0 +1,167 @@
+import { model, Schema } from 'mongoose';
+import { UserModelType } from './user.model';
+import autopopulate from 'mongoose-autopopulate';
+import { GroupsModelType } from './groups.model';
+import { UserModelHelper } from '../helpers/user.helper';
+import { DbTaskPriorities, DbTaskStatuses } from '../../common/constants';
+import { EventInviteQueryType } from './event-invite.model';
+
+export type PriorityKeys = 'veryLow' | 'low' | 'medium' | 'high' | 'veryHigh';
+
+export type CalendarPriorityKeys = PriorityKeys | 'not_selected';
+
+export type TaskStatusesType =
+  | 'completed'
+  | 'created'
+  | 'in_progress'
+  | 'review'
+  | 'archive';
+
+export interface EventLinkItem {
+  key: string;
+  value: string;
+}
+
+export interface DbEventChildOfItemSchemaType<T = Schema.Types.ObjectId> {
+  event: T;
+  _id: Schema.Types.ObjectId;
+  createdAt: Date;
+}
+
+export interface DbEventModel {
+  _id: Schema.Types.ObjectId;
+  description: string;
+  link: EventLinkItem | null;
+  linkedFrom?: Schema.Types.ObjectId;
+  parentId?: Schema.Types.ObjectId;
+  priority: PriorityKeys;
+  status: TaskStatusesType;
+  time: Date;
+  timeEnd: Date;
+  title: string;
+  type: string;
+  userId: Schema.Types.ObjectId;
+  group: Schema.Types.ObjectId | null;
+  likedUsers: Array<Schema.Types.ObjectId>;
+  createdAt: Date;
+  updatedAt: Date;
+  invites: Array<EventModelInvitesObject>;
+  treeId: Schema.Types.ObjectId | null;
+}
+
+export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
+  userId: Schema.Types.ObjectId;
+  inviteId: InviteType | null;
+}
+
+export interface EventModelType
+  extends Omit<DbEventModel, 'userId' | 'group' | 'invites'> {
+  userId: UserModelType;
+  group: GroupsModelType | null;
+  invites: Array<
+    EventModelInvitesObject<
+      Omit<EventInviteQueryType, 'event' | 'createdAt' | 'updatedAt'>
+    >
+  >;
+}
+
+export interface EventModelWithPopulatedChains
+  extends Omit<EventModelType, 'linkedFrom' | 'parentId'> {
+  parentId: EventModelType | null;
+  linkedFrom: EventModelType | null;
+}
+
+export const LinkSchema = new Schema({
+  key: { type: String, required: true },
+  value: { type: String, required: true },
+});
+
+export const EventSchema = new Schema(
+  {
+    title: { type: String, required: true }, //+
+    description: { type: String }, //+
+    treeId: { type: String, default: null },
+    link: { type: LinkSchema, required: false, default: null }, //+
+    linkedFrom: {
+      type: Schema.Types.ObjectId || undefined,
+      ref: 'Event',
+      default: null,
+    }, //+
+    parentId: {
+      type: Schema.Types.ObjectId || undefined,
+      ref: 'Event',
+      default: null,
+    }, //+
+    priority: {
+      type: String,
+      required: true,
+      default: 'medium' as PriorityKeys,
+      of: DbTaskPriorities,
+    },
+    status: {
+      type: String,
+      required: true,
+      default: 'created' as TaskStatusesType,
+      of: DbTaskStatuses,
+    },
+    time: { type: Date, required: true },
+    timeEnd: { type: Date, required: true },
+    type: { type: String, required: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      autopopulate: {
+        select: [
+          'name',
+          'surname',
+          'phone',
+          '_id',
+          'email',
+          'patronymic',
+          'created',
+        ],
+      },
+      required: true,
+      get: (v: UserModelType) =>
+        UserModelHelper.getPopulatedUserWithoutPassword(v),
+    },
+    invites: {
+      type: [
+        {
+          type: {
+            userId: {
+              type: Schema.Types.ObjectId,
+              required: true,
+              ref: 'User',
+            },
+            inviteId: {
+              type: Schema.Types.ObjectId,
+              required: true,
+              ref: 'EventInvite',
+              autopopulate: true,
+            },
+          },
+        },
+      ],
+      default: [],
+    },
+    group: {
+      type: Schema.Types.ObjectId,
+      ref: 'Group',
+      required: true,
+      autopopulate: true,
+    },
+    likedUsers: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
+      default: [],
+    },
+  },
+  { timestamps: true }
+);
+
+EventSchema.plugin(autopopulate);
+EventSchema.index({ group: 1 });
+EventSchema.index({ treeId: 1 });
+EventSchema.index({ userId: 1 });
+
+export const EventModel = model<EventModelType>('Event', EventSchema);
