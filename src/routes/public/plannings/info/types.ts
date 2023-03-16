@@ -75,11 +75,14 @@ export type ShortEventItemResponseFields =
   | 'status'
   | 'group'
   | 'isLiked'
-  | 'userId';
+  | 'userId'
+  | 'treeId';
 export type ShortEventItemResponse = Pick<
   DefaultEventItemResponse,
   ShortEventItemResponseFields
 >;
+
+export type ChainsTypes = 'parentOf' | 'childOf';
 
 //Объект, описывающий фильтры, по которым могут выполняться запросы к серверу
 export interface RequestEventFilters {
@@ -96,6 +99,10 @@ export interface RequestEventFilters {
     linkedFrom?: Schema.Types.ObjectId;
     parentId?: Schema.Types.ObjectId;
   };
+  chainsFilter?: {
+    type: ChainsTypes;
+    eventId: Schema.Types.ObjectId;
+  }; //учитывать тип связей
 }
 
 interface MapBuildTypes {

@@ -26,11 +26,15 @@ import {
   DbTaskPriorities,
   TaskStatusesObject,
 } from '../../../../../common/constants';
-import { EventModelType } from '../../../../../mongo/models/event.model';
+import {
+  EventModel,
+  EventModelType,
+} from '../../../../../mongo/models/event.model';
 import { GroupsHelper } from '../../groups/helpers/groups.helper';
 import { UserModelHelper } from '../../../../../mongo/helpers/user.helper';
 import { RootsFilterType } from './types';
 import { UserModelResponse } from '../../../session/types';
+import { EventTree } from '../../chains/helpers/tree.helper';
 
 /** @class EventBuildHelper
  * @author Андрей Черников
@@ -169,6 +173,7 @@ export class EventBuildHelper extends EventCheckingHelper {
       exclude, //Доп.фильтры, имеющие параметры исключения событий из выборки
       utcOffset, //Смещение от utc в минутах
       findOnlyInSelectedGroups, //Если true - поиск идет по выбранным группам событий, иначе верну только созданные юзером (без приглашений)
+      chainsFilter,
     } = filters;
 
     //Создаю пустой объект, куда буду складывать параметры запроса
@@ -330,6 +335,69 @@ export class EventBuildHelper extends EventCheckingHelper {
       };
     }
 
+    if (chainsFilter) {
+      if (
+        (chainsFilter.type === 'parentOf' || chainsFilter.type === 'childOf') &&
+        chainsFilter.eventId
+      ) {
+        const event: HydratedDocument<EventModelType> | null =
+          await EventModel.findOne({
+            _id: chainsFilter.eventId,
+          });
+
+        if (!event) {
+          throw new ResponseException(
+            ResponseException.createObject(
+              404,
+              'error',
+              'Не удалось сформировать фильтры для поиска событий'
+            )
+          );
+        }
+
+        if (event.treeId) {
+          const eventsInTree: Array<EventModelType> | null =
+            await EventModel.find({
+              treeId: event.treeId,
+            });
+
+          if (!eventsInTree) {
+            throw new ResponseException(
+              ResponseException.createObject(
+                404,
+                'error',
+                'Не удалось сформировать фильтры для поиска событий по дереву'
+              )
+            );
+          }
+          console.log(eventsInTree);
+
+          const tree = new EventTree(eventsInTree);
+          const paths = tree.paths[event._id.toString()];
+
+          console.log(tree, paths);
+
+          if (paths) {
+            result._id['$nin']
+              ? result._id['$nin'].push(
+                  ...paths[
+                    chainsFilter.type === 'parentOf'
+                      ? 'childsIds'
+                      : 'parentsIds'
+                  ]
+                )
+              : (result._id['$nin'] =
+                  chainsFilter.type === 'parentOf'
+                    ? paths.childsIds
+                    : paths.parentsIds);
+
+            result._id['$nin'].push(paths.event._id);
+            console.log(JSON.stringify(result, null, '\t'));
+          }
+        }
+      }
+    }
+
     //Все выше описанные фильтры сужают поиск событий
     //За исключением $or фильтров
 
@@ -360,6 +428,7 @@ export class EventBuildHelper extends EventCheckingHelper {
       group: GroupsHelper.buildGroupItemForResponse(event.group), //Группа событий
       description: event.description, //Описание события,
       userId: UserModelHelper.getPopulatedUserWithoutPassword(event.userId),
+      treeId: event.treeId,
     };
   }
 

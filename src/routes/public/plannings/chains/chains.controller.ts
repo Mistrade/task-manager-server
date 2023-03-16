@@ -214,6 +214,37 @@ export const connectChildrenEvent: ConnectChildrenEventFn = async (
       }),
     ];
 
+    const parentsWhoLoseChildren = addedEvents
+      .map((item) => item.parentId)
+      .filter((value): value is Schema.Types.ObjectId => !!value);
+
+    if (parentsWhoLoseChildren.length > 0) {
+      const parentsForRemovedChildren: Array<EventModelType> | null =
+        await EventModel.find({
+          _id: { $in: parentsWhoLoseChildren },
+        });
+
+      if (!parentsForRemovedChildren) {
+        throw new ResponseException(
+          ResponseException.createObject(
+            404,
+            'error',
+            'Не удалось найти родителей добавляемых событий, чтобы разорвать с ними связь'
+          )
+        );
+      }
+
+      history.push(
+        ...parentsForRemovedChildren.map((item) => {
+          return historyApi.buildHistoryItem('removeChildOfEvents', item, {
+            removeChildOfEvents: addedEvents
+              .filter((child) => child.parentId === item._id)
+              .map((child) => historyApi.getSnapshotRequiredFields(child)),
+          });
+        })
+      );
+    }
+
     const resultEventsIds: Array<string> = [
       ...eventsForUpdate,
       currentEvent._id.toString(),

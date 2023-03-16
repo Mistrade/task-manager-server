@@ -55,8 +55,8 @@ export class EventTree<
   public paths: PathsObj<InitialEventType>;
 
   constructor(arr: Array<InitialEventType>) {
-    this.eventTree = this.generateEventTree(arr);
     this.paths = {};
+    this.eventTree = this.generateEventTree(arr);
   }
 
   //Это метод для углубления в дерево

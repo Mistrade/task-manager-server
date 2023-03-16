@@ -168,3 +168,5 @@ export const updateEventInfo: InfoHandlerObject['updateEventInfo'] = async (
     return response.status(status).json(json);
   }
 };
+
+export const getShortEventsArrayForChains = async () => {};
