@@ -227,7 +227,7 @@ export class EventBuildHelper extends EventCheckingHelper {
       const groupFilters: Array<AnyObject> = [];
 
       //Если приглашения выбраны добавляю в $or условие, что в инвайтах юзер должен быть
-      if (!!selectedGroups.find((group) => group.type === 'Invite')) {
+      if (selectedGroups.find((group) => group.type === 'Invite')) {
         //Ищем в приглашениях
         groupFilters.push({
           'invites.userId': this.user._id,

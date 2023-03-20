@@ -7,9 +7,6 @@ export interface RegistrationRequestBody {
   surname: string;
 }
 
-export interface RegistrationResponseBody {}
-
-export type RegistrationResponseResult = RegistrationResponseBody;
 export type UtcDateString = string;
 export type UtcDate = Date;
 

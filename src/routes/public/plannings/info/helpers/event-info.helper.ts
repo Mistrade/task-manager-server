@@ -27,6 +27,4 @@ export class EventInfoHelper {
 
     return date.utc().toDate();
   }
-
-  public async update() {}
 }

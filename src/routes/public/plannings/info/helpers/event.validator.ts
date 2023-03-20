@@ -1,6 +1,4 @@
 export class EventValidator {
-  constructor() {}
-
   public validateTitle(value: string): boolean {
     if (typeof value !== 'string') {
       return false;

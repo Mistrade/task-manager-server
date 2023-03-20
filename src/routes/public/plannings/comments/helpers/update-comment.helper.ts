@@ -44,7 +44,7 @@ export class UpdateCommentHelper extends CommentsHelper {
       'Недостаточно прав доступа для совершения этой операции.'
     );
 
-    let updateObject: Record<string, any> = {};
+    const updateObject: Record<string, any> = {};
 
     const isImportantCurrentState = !!comment.likedUsers?.find((item) =>
       objectIdIsEquals(item, this.user._id)

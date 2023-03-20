@@ -213,7 +213,13 @@ const handlers = {
     }
   },
   //Сброс пароля
-  async reset(req: express.Request, res: express.Response) {},
+  async reset(req: express.Request, res: express.Response) {
+    try {
+      return res.status(404);
+    } catch (e) {
+      return res.status(500);
+    }
+  },
   //Подтверждение учетной записи
   async confirm(
     req: express.Request,

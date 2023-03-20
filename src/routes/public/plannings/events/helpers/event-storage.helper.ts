@@ -18,8 +18,6 @@ import { FilterTaskStatuses } from '../../types';
  * @author Андрей Черников
  */
 export class EventStorageHelper {
-  constructor() {}
-
   /**@name utcOffsetDate
    * @summary Добавляет к полученной дате, смещение от UTC
    * @param date {Date, Dayjs, string} - Дата, к которой надо добавить смещение от UTC
@@ -153,7 +151,7 @@ export class EventStorageHelper {
     arr: Array<ReturnEventTypeAfterBuild<BuildType>>,
     utcOffset: number
   ): EventSchemeResponse {
-    let result: EventSchemeResponse = {};
+    const result: EventSchemeResponse = {};
 
     console.log('смешение utc: ', utcOffset);
 

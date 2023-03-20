@@ -125,7 +125,7 @@ export class TreeValidator {
 
       this.buildPlaneTree(eventsInTrees);
 
-      for await (let event of reqEvents) {
+      for await (const event of reqEvents) {
         if (event.treeId) {
           const eventTreeId = event.treeId.toString();
           const eventsInPlane = this.planeTree[eventTreeId] || [];
@@ -202,9 +202,9 @@ export class TreeValidator {
   ) {
     const currentEventTreeId = currentEvent.treeId?.toString() || null;
 
-    let treesIntersections: Array<EventModelType> = [];
-    let trees: Set<Schema.Types.ObjectId> = new Set();
-    let eventIdsList: Array<string> = [];
+    const treesIntersections: Array<EventModelType> = [];
+    const trees: Set<Schema.Types.ObjectId> = new Set();
+    const eventIdsList: Array<string> = [];
 
     arr.forEach((item) => {
       const itemTreeId = item.treeId?.toString() || null;

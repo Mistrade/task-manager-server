@@ -1,0 +1,11 @@
+node_modules
+mongo-data-4.4
+Dockerfile
+docker-compose.development.yml
+docker-compose.yml
+.prettierignore
+.gitignore
+prettier.config.js
+package.json
+package-lock.json
+tsconfig.json

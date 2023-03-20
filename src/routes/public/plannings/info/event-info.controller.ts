@@ -9,19 +9,19 @@ import { EventUpdateHelper } from './helpers/event-update.helper';
 export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
   async (req, res) => {
     try {
-      let { user, params } = req;
+      const { user, params } = req;
       const { eventId } = params;
 
       const eventHelper = new EventHelper(user);
 
-      let event = await eventHelper.getEventWithCheckRoots(
+      const event = await eventHelper.getEventWithCheckRoots(
         { _id: eventId },
         'viewer'
       );
 
       console.log(JSON.stringify(event));
 
-      let resultEvent: DefaultEventItemResponse = await eventHelper
+      const resultEvent: DefaultEventItemResponse = await eventHelper
         .resolveEventsGroupAndBuild([event], 'viewer', 'Invite', 'default')
         .then((r) => r[0]);
 
@@ -50,7 +50,7 @@ export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
 export const getShortEventsArray: InfoHandlerObject['getShortEventsArray'] =
   async (request, response) => {
     try {
-      let { user, body } = request;
+      const { user, body } = request;
 
       const eventApi = new EventHelper(user);
 
@@ -73,7 +73,7 @@ export const getEventsStorage: InfoHandlerObject['getEventsAtScope'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const finder = new EventHelper(user);
 
@@ -99,7 +99,7 @@ export const getEventsStorage: InfoHandlerObject['getEventsAtScope'] = async (
 export const getEventCounterOfStatuses: InfoHandlerObject['getEventCounterOfStatuses'] =
   async (request, response) => {
     try {
-      let { user, body } = request;
+      const { user, body } = request;
 
       const finder = new EventHelper(user);
       //Перезаписываю eventStatus, чтобы не сужать поиск по статусам
@@ -126,7 +126,7 @@ export const getEventsScheme: InfoHandlerObject['getEventsScheme'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const finder = new EventHelper(user);
 
@@ -151,7 +151,7 @@ export const updateEventInfo: InfoHandlerObject['updateEventInfo'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const eventUpdateApi = new EventUpdateHelper(user);
 
@@ -168,5 +168,3 @@ export const updateEventInfo: InfoHandlerObject['updateEventInfo'] = async (
     return response.status(status).json(json);
   }
 };
-
-export const getShortEventsArrayForChains = async () => {};

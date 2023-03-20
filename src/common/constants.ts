@@ -31,7 +31,7 @@ export const TaskFilteredStatusesObject = (() => {
     review: [],
   };
 
-  for (let key in TaskStatusesObject) {
+  for (const key in TaskStatusesObject) {
     const values = TaskStatusesObject[key as FilterTaskStatuses];
 
     values.forEach((status) => {

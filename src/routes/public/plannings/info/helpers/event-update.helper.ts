@@ -280,7 +280,7 @@ export class EventUpdateHelper extends EventValidator {
     }
 
     const historyApi = new HistoryHelper(this.user);
-    const description: string | undefined = !!value.data
+    const description: string | undefined = value.data
       ? undefined
       : 'Ссылка для подключения была удалена';
     return {

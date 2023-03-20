@@ -4,7 +4,7 @@ import {
   ResponseReturned,
 } from '../routes/public/plannings/types';
 
-export class ResponseException<T extends any = any> {
+export class ResponseException<T> {
   public status: number;
   public json: ResponseReturned<CustomResponseBody<T>>['json'];
 
@@ -13,7 +13,7 @@ export class ResponseException<T extends any = any> {
     this.json = data.json;
   }
 
-  public static createObject<T extends any = any>(
+  public static createObject<T>(
     status: number,
     type: ErrorTypes,
     message: string,
@@ -28,7 +28,7 @@ export class ResponseException<T extends any = any> {
     };
   }
 
-  public static createSuccessObject<T extends object | null = any>(
+  public static createSuccessObject<T extends object | null>(
     data: T,
     message?: string
   ): ResponseException<T> {
@@ -42,7 +42,7 @@ export class ResponseException<T extends any = any> {
   }
 }
 
-export const CatchErrorHandler = <T extends any = any>(
+export const CatchErrorHandler = <T = any>(
   error: any
 ): ResponseException<T> => {
   if ('status' in error && 'json' in error) {

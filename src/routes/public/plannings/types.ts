@@ -2,7 +2,7 @@ import { EventModelType } from '../../../mongo/models/event.model';
 import express from 'express';
 import { UserModelResponse } from '../session/types';
 
-export interface AuthRequest<Data extends any = any, Params = any>
+export interface AuthRequest<Data = any, Params = any>
   extends express.Request<Params, any, Data> {
   user?: UserModelResponse;
 }
@@ -23,7 +23,7 @@ export interface CustomResponseBody<T> {
   };
 }
 
-export interface ResponseReturned<T extends any = any> {
+export interface ResponseReturned<T = any> {
   status: number;
   json: T;
 }

@@ -12,11 +12,6 @@ interface ErrorObject {
   message: string;
 }
 
-export interface RequestBody<T extends any = any> {
-  user: UserModelType;
-  data: T;
-}
-
 export async function AuthMiddleware(
   req: AuthRequest,
   res: express.Response<ErrorObject>,

@@ -49,7 +49,6 @@ export class EventHelper extends EventBuildHelper {
     filters: EventModelFilters,
     populated?: Array<PopulateOptions>
   ): Promise<HydratedDocument<EventType>> {
-    console.log('filters: ', JSON.stringify(filters));
     const event: HydratedDocument<EventType> | null = (await EventModel.findOne(
       filters
     ).populate(populated || [])) as unknown as HydratedDocument<EventType>;
@@ -67,7 +66,7 @@ export class EventHelper extends EventBuildHelper {
     filters: EventModelFilters,
     populate?: Array<PopulateOptions>
   ): Promise<Array<HydratedDocument<EventModelType>>> {
-    let result: Array<HydratedDocument<EventModelType>> | null =
+    const result: Array<HydratedDocument<EventModelType>> | null =
       await EventModel.find(filters).populate(populate || []);
 
     if (!result) {
@@ -140,7 +139,7 @@ export class EventHelper extends EventBuildHelper {
   public async create(
     data: EventHandler_Create_RequestData
   ): Promise<HydratedDocument<EventModelType>> {
-    let {
+    const {
       //Входные данные, которые прилетают на запрос
       title,
       timeEnd,
@@ -153,9 +152,8 @@ export class EventHelper extends EventBuildHelper {
       parentId,
       priority,
       description,
-      members,
     } = data;
-
+    let { members } = data;
     //Создаю экземпляр помощника в работе с группами
     const groupApi = new GroupsHelper(this.user);
     //Вызываю метод resolveGroup, который найдет группу по groupId значению или вернет group.type = "Main" из БД, если по groupId найти не удалось

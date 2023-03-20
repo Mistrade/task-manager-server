@@ -11,11 +11,10 @@ export const getHistoryListByEventId: HistoryListByEventIdFn = async (
   response
 ) => {
   try {
-    let {
-      user,
+    let { user } = request;
+    const {
       params: { eventId },
     } = request;
-
     user = new SessionController(user).checkUser();
 
     const historyApi = new HistoryHelper(user);

@@ -10,7 +10,7 @@ import { UserModelResponse } from '../../session/types';
 export const getGroupInfoById: GroupControllerObject['getGroupInfoById'] =
   async (request, response) => {
     try {
-      let {
+      const {
         user,
         params: { groupId },
       } = request;
@@ -61,7 +61,7 @@ export const getGroupList: GroupControllerObject['getGroupList'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const groupApi = new GroupsHelper(user);
 
@@ -88,7 +88,7 @@ export const getGroupList: GroupControllerObject['getGroupList'] = async (
 export const changeGroupIsSelect: GroupControllerObject['changeGroupIsSelect'] =
   async (request, response) => {
     try {
-      let { user, body } = request;
+      const { user, body } = request;
 
       const groupApi = new GroupsHelper(user);
 
@@ -111,7 +111,7 @@ export const createGroup: GroupControllerObject['createGroup'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const groupApi = new GroupsHelper(user);
 
@@ -134,7 +134,7 @@ export const removeGroup: GroupControllerObject['removeGroup'] = async (
   response
 ) => {
   try {
-    let {
+    const {
       user,
       body: { groupId },
     } = request;
@@ -160,7 +160,7 @@ export const updateGroupInfo: GroupControllerObject['updateGroupInfo'] = async (
   response
 ) => {
   try {
-    let { user, body } = request;
+    const { user, body } = request;
 
     const groupApi = new GroupsHelper(user);
 

@@ -259,7 +259,7 @@ export class CommentsHelper {
 
   public async removeCommentsByEventId(
     eventId: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>,
-    disableCheckRoots: boolean = false
+    disableCheckRoots = false
   ): Promise<boolean> {
     if (!eventId || (Array.isArray(eventId) && eventId?.length === 0)) {
       console.log('cекция 1');

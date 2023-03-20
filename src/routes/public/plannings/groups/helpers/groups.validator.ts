@@ -5,8 +5,6 @@ import {
 } from '../../../../../common/constants';
 
 export class GroupsValidator {
-  constructor() {}
-
   /** @name validateGroupTitle
    * @summary - проверяет длину заголовка группы событий
    * @description - от 5 до 20 символов включительно
