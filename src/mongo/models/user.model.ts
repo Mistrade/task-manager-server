@@ -13,10 +13,23 @@ export interface UserModelType {
   password: string;
 }
 
+export type TUserOmitPassword = Omit<UserModelType, 'password'>;
+
 export type ShortUserModel = Pick<
   UserModelResponse,
   'name' | 'surname' | '_id'
 >;
+
+export const SelectedPopulateUserFields: Array<keyof UserModelType> = [
+  '_id',
+  'email',
+  'phone',
+  'name',
+  'surname',
+  'patronymic',
+  'created',
+  'lastUpdate',
+];
 
 const UserSchema = new Schema({
   email: { type: String, required: false },

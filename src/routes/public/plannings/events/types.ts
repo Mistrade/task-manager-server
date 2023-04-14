@@ -3,6 +3,7 @@ import { Schema } from 'mongoose';
 import {
   CalendarPriorityKeys,
   EventLinkItem,
+  ICheckListItem,
   TaskStatusesType,
 } from '../../../../mongo/models/event.model';
 import { EventInviteAccessRights } from '../../../../mongo/models/event-invite.model';
@@ -28,6 +29,11 @@ export interface EventHandler_Create_RequestData {
     _id: Schema.Types.ObjectId;
     accessRights: EventInviteAccessRights;
   }>;
+  attachCheckList: boolean;
+  checkList: {
+    title: string;
+    data: Array<ICheckListItem>;
+  };
 }
 
 export interface EventHandlerObject {

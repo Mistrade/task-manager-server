@@ -3,6 +3,7 @@ import {
   ErrorTypes,
   ResponseReturned,
 } from '../routes/public/plannings/types';
+import { ApiResponse } from '../routes/types';
 
 export class ResponseException<T> {
   public status: number;
@@ -41,6 +42,26 @@ export class ResponseException<T> {
     };
   }
 }
+
+export const SuccessResponse = <T extends object | null>(
+  data: T,
+  response: ApiResponse<T>,
+  message?: string
+) => {
+  const { status, json } = new ResponseException(
+    ResponseException.createSuccessObject(data, message)
+  );
+
+  return response.status(status).json(json);
+};
+
+export const CatchResponse = <T>(
+  error: T,
+  response: ApiResponse
+): ApiResponse => {
+  const { status, json } = CatchErrorHandler(error);
+  return response.status(status).json(json);
+};
 
 export const CatchErrorHandler = <T = any>(
   error: any

@@ -27,6 +27,7 @@ export interface CreateSnapshotDefaultFields {
 
 //Интерфейс объекта, предназначенного для записи объекта истории в базу, включающий только необязательные поля схемы
 export interface EventSnapshotCreateOptionalType {
+  checkList?: string | null; //Название чек-листа
   group?: Schema.Types.ObjectId | null;
   description?: string;
   insertChildOfEvents?: Array<EventHistoryRequiredFields>;

@@ -67,6 +67,7 @@ export const DbTaskPriorities: Array<PriorityKeys> = [
 export const HistoryDescription: {
   [key in EventHistoryEditableFieldNames]: string;
 } = {
+  checkList: 'К событию был добавлен чек-лист',
   createdAt: 'Событие создано',
   group: 'Изменена группа, за которой закреплено событие',
   description: 'Изменено описание события',

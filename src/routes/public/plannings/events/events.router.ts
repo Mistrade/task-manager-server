@@ -5,6 +5,7 @@ import { GroupsRouter } from '../groups/groups.router';
 import { CommentsRouter } from '../comments/comments.router';
 import { EventInfoRouter } from '../info/event-info.router';
 import { EventsController } from './events.controller';
+import { CheckListRouter } from '../check-list/check-list.router';
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/history', HistoryRouter); //+
 router.use('/chains', ChainsRouter);
 router.use('/groups', GroupsRouter); //+
 router.use('/comments', CommentsRouter);
+router.use(CheckListRouter);
 
 export const EventsRouter = router;

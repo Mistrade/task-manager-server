@@ -1,11 +1,9 @@
 import { AuthRequest } from '../plannings/types';
 import { ApiResponse } from '../../types';
 import { UserModelResponse } from '../session/types';
-import {
-  ContactAcceptStatuses,
-  TContactsSchemaDefault,
-} from '../../../mongo/models/contacts.model';
+import { TContactsSchemaDefault } from '../../../mongo/models/contacts.model';
 import { Schema } from 'mongoose';
+import { TFriendRequestStatuses } from '../../../mongo/models/friend-request.model';
 
 export interface IContactsRequestProps {
   addContact: IAddContactRequestProps;
@@ -33,13 +31,13 @@ export interface IGetContactsProps {
 
 export type TGetContactsResponseObject = {
   userInfo: UserModelResponse;
-  acceptedStatus: keyof typeof ContactAcceptStatuses;
+  acceptedStatus: TFriendRequestStatuses;
 } & Omit<TContactsSchemaDefault, 'acceptedStatus'>;
 
 export type TGetContactsResponseArray = Array<TGetContactsResponseObject>;
 
 export interface IResponseOnFriendsOrderRequestProps {
-  acceptedStatus: keyof typeof ContactAcceptStatuses;
+  acceptedStatus: TFriendRequestStatuses;
   _id: Schema.Types.ObjectId;
 }
 

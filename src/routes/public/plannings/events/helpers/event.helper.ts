@@ -34,6 +34,7 @@ import {
 import { EventModelFilters } from '../../types';
 import { CommentsHelper } from '../../comments/helpers/comments.helper';
 import { UserModelResponse } from '../../../session/types';
+import { CheckListHelper } from '../../check-list/check-list.helper';
 
 export class EventHelper extends EventBuildHelper {
   public user: UserModelResponse;
@@ -152,6 +153,8 @@ export class EventHelper extends EventBuildHelper {
       parentId,
       priority,
       description,
+      checkList,
+      attachCheckList,
     } = data;
     let { members } = data;
     //Создаю экземпляр помощника в работе с группами
@@ -261,6 +264,18 @@ export class EventHelper extends EventBuildHelper {
       }
     }
 
+    // if (attachCheckList && checkList && checkList.data.length) {
+    //   eventData.checkList = checkList.data.map(
+    //     (item): TCheckListItemWithoutId => {
+    //       return {
+    //         title: item.title,
+    //         eventLink: item.eventLink,
+    //         state: item.state,
+    //       };
+    //     }
+    //   );
+    // }
+
     //Теперь, когда все проверки для создания события пройдены - создаю событие в базе и получаю созданное из базы
     const createdEvent: HydratedDocument<EventModelType> | null =
       await EventModel.create({
@@ -272,7 +287,7 @@ export class EventHelper extends EventBuildHelper {
         priority, //приоритет
         time: utcDate(startTime), //дата начала в формате utc
         timeEnd: utcDate(endTime), //дата завершения в формате utc
-        type, //тип события
+        type: 'event', //тип события
         link, //ссылка
         invites: [], //Список приглашений по умолчанию пустой, с ним работа будет ниже
         userId: this.user._id, //создатель события
@@ -313,6 +328,30 @@ export class EventHelper extends EventBuildHelper {
       })
     );
 
+    if (attachCheckList && checkList.data.length && checkList.title) {
+      try {
+        const checkListDb = await new CheckListHelper(
+          this.user
+        ).createCheckList({
+          title: checkList.title,
+          eventId: createdEvent._id,
+          data: checkList.data,
+        });
+
+        createdEvent.checkList = checkListDb._id;
+
+        await createdEvent.save();
+
+        toHistoryArray.push(
+          historyApi.buildHistoryItem('checkList', createdEvent, {
+            checkList: checkListDb.title,
+          })
+        );
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
     //Если было событие донор
     if (linkedFromEvent) {
       //Добавляю запись к только что созданному событию о том, что событие было клонировано
@@ -336,6 +375,7 @@ export class EventHelper extends EventBuildHelper {
         }
       );
 
+      console.log(parentEvent);
       //Добавляю в массив истории 2 объекта
       toHistoryArray.push(
         //Первый объект - это запись в только что созданное событие о том, что событие привязано к родительскому
@@ -343,7 +383,7 @@ export class EventHelper extends EventBuildHelper {
           'parentEvent',
           createdEvent,
           {
-            parentEvent: historyApi.getSnapshotRequiredFields(createdEvent),
+            parentEvent: historyApi.getSnapshotRequiredFields(parentEvent),
           },
           { customDescription: 'Создана связь с родительским событием' }
         ),

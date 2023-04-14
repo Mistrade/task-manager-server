@@ -1,10 +1,10 @@
-import { UserModelType } from '../models/user.model';
+import { TUserOmitPassword, UserModelType } from '../models/user.model';
 import { utcString } from '../../common/common';
 import { UserModelResponse } from '../../routes/public/session/types';
 
 export class UserModelHelper {
   public static getPopulatedUserWithoutPassword(
-    user: UserModelType
+    user: UserModelType | TUserOmitPassword
   ): UserModelResponse {
     return {
       _id: user._id,

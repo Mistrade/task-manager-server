@@ -227,6 +227,7 @@ export class HistoryHelper {
       link: null,
       isLiked: null,
       type: null,
+      checkList: null,
     };
   }
 

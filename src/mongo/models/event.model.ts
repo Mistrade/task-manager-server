@@ -28,6 +28,15 @@ export interface DbEventChildOfItemSchemaType<T = Schema.Types.ObjectId> {
   createdAt: Date;
 }
 
+export interface ICheckListItem {
+  title: string;
+  state: boolean;
+  eventLink: Schema.Types.ObjectId | null;
+  _id: Schema.Types.ObjectId;
+}
+
+export type TCheckListItemWithoutId = Omit<ICheckListItem, '_id'>;
+
 export interface DbEventModel {
   _id: Schema.Types.ObjectId;
   description: string;
@@ -47,6 +56,7 @@ export interface DbEventModel {
   updatedAt: Date;
   invites: Array<EventModelInvitesObject>;
   treeId: Schema.Types.ObjectId | null;
+  checkList: null | Schema.Types.ObjectId;
 }
 
 export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
@@ -78,6 +88,11 @@ export const LinkSchema = new Schema({
 
 export const EventSchema = new Schema(
   {
+    checkList: {
+      type: Schema.Types.ObjectId,
+      ref: 'CheckList',
+      default: null,
+    },
     title: { type: String, required: true }, //+
     description: { type: String }, //+
     treeId: { type: String, default: null },

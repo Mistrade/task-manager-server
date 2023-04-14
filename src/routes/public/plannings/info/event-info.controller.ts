@@ -5,6 +5,7 @@ import {
 } from '../../../../exceptions/response.exception';
 import { EventHelper } from '../events/helpers/event.helper';
 import { EventUpdateHelper } from './helpers/event-update.helper';
+import { updateEventResultMessagesMap } from './helpers/constants';
 
 export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
   async (req, res) => {
@@ -158,7 +159,10 @@ export const updateEventInfo: InfoHandlerObject['updateEventInfo'] = async (
     await eventUpdateApi.updateEventInfoAndPushToHistory(body);
 
     const { status, json } = new ResponseException(
-      ResponseException.createSuccessObject(null)
+      ResponseException.createSuccessObject(
+        null,
+        updateEventResultMessagesMap[body.field]
+      )
     );
 
     return response.status(status).json(json);
