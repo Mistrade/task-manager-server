@@ -1,16 +1,17 @@
-import { EventModelType } from '../../../../../mongo/models/event.model';
-import { objectIdIsEquals } from '../../../../../common/common';
+import dayjs from 'dayjs';
 import { Schema } from 'mongoose';
+import { objectIdIsEquals } from '../../../../../common/common';
+import { minimalRootsMap } from '../../../../../common/constants';
 import { ResponseException } from '../../../../../exceptions/response.exception';
-import { EventStorageHelper } from './event-storage.helper';
-import { EventHelper } from './event.helper';
-import { DefaultEventItemResponse } from '../../info/types';
 import {
   AccessRightsWithOwner,
   EventInviteAccessRights,
 } from '../../../../../mongo/models/event-invite.model';
-import { minimalRootsMap } from '../../../../../common/constants';
+import { EventModelType } from '../../../../../mongo/models/event.model';
 import { UserModelResponse } from '../../../session/types';
+import { DefaultEventItemResponse } from '../../info/types';
+import { EventStorageHelper } from './event-storage.helper';
+import { EventHelper } from './event.helper';
 
 export type CheckUserRootsReturnedTypes =
   | 'response-item'
@@ -299,5 +300,23 @@ export class EventCheckingHelper extends EventStorageHelper {
    */
   public isCreatorOrAdmin(e: EventModelType): boolean {
     return this.isCreator(e) || this.isAdmin(e);
+  }
+
+  /**
+   * @name isDelayedEvent
+   * @this {user} - текущий пользователь
+   * @param e {EventModelType} - событие, для которого будет производиться вычисление
+   * @summary Метод проверяет, является ли событие просроченным, основываясь на текущем статусе и времени завершения события
+   * @return boolean
+   * @since 24.04.2023
+   */
+  public isDelayedEvent(e: EventModelType): boolean {
+    const isCompleted = e.status === 'completed';
+
+    if (isCompleted) {
+      return false;
+    }
+
+    return dayjs().isAfter(e.timeEnd, 'minute');
   }
 }

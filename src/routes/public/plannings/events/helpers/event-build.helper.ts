@@ -1,4 +1,30 @@
-import { EventCheckingHelper } from './event-checking.helper';
+import dayjs, { Dayjs } from 'dayjs';
+import { HydratedDocument, Schema } from 'mongoose';
+import {
+  objectIdInArrayOfAnotherObjectId,
+  objectIdIsEquals,
+  utcDate,
+  utcString,
+} from '../../../../../common/common';
+import {
+  DbTaskPriorities,
+  TaskStatusesObject,
+} from '../../../../../common/constants';
+import { ResponseException } from '../../../../../exceptions/response.exception';
+import { UserModelHelper } from '../../../../../mongo/helpers/user.helper';
+import {
+  EventModel,
+  EventModelType,
+} from '../../../../../mongo/models/event.model';
+import {
+  GroupModel,
+  GroupsModelType,
+  GroupUniqueTypes,
+} from '../../../../../mongo/models/groups.model';
+import { UserModelResponse } from '../../../session/types';
+import { EventTree } from '../../chains/helpers/tree.helper';
+import { GroupsHelper } from '../../groups/helpers/groups.helper';
+import { AnyObject } from '../../history/helper/history.helper';
 import {
   DateInputValue,
   DateQueryObject,
@@ -7,34 +33,8 @@ import {
   RequestEventFilters,
   ReturnEventTypeAfterBuild,
 } from '../../info/types';
-import dayjs, { Dayjs } from 'dayjs';
-import {
-  objectIdInArrayOfAnotherObjectId,
-  objectIdIsEquals,
-  utcDate,
-  utcString,
-} from '../../../../../common/common';
-import { AnyObject } from '../../history/helper/history.helper';
-import { HydratedDocument, Schema } from 'mongoose';
-import {
-  GroupModel,
-  GroupsModelType,
-  GroupUniqueTypes,
-} from '../../../../../mongo/models/groups.model';
-import { ResponseException } from '../../../../../exceptions/response.exception';
-import {
-  DbTaskPriorities,
-  TaskStatusesObject,
-} from '../../../../../common/constants';
-import {
-  EventModel,
-  EventModelType,
-} from '../../../../../mongo/models/event.model';
-import { GroupsHelper } from '../../groups/helpers/groups.helper';
-import { UserModelHelper } from '../../../../../mongo/helpers/user.helper';
+import { EventCheckingHelper } from './event-checking.helper';
 import { RootsFilterType } from './types';
-import { UserModelResponse } from '../../../session/types';
-import { EventTree } from '../../chains/helpers/tree.helper';
 
 /** @class EventBuildHelper
  * @author Андрей Черников
@@ -429,6 +429,7 @@ export class EventBuildHelper extends EventCheckingHelper {
       description: event.description, //Описание события,
       userId: UserModelHelper.getPopulatedUserWithoutPassword(event.userId),
       treeId: event.treeId,
+      isDelayed: this.isDelayedEvent(event),
     };
   }
 
@@ -477,6 +478,7 @@ export class EventBuildHelper extends EventCheckingHelper {
         ? undefined
         : invite?.inviteId?.acceptedStatus || 'not_accepted', //Статус принятия события приглашенным пользователем
       accessRights: isCreator ? 'owner' : invite?.inviteId?.accessRights, //Права доступа текущего юзера к событию,
+      isDelayed: this.isDelayedEvent(event),
     };
   }
 

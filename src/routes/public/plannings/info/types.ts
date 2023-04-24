@@ -1,5 +1,10 @@
-import { ByEventIdType } from '../events/types';
-import { ApiResponse } from '../../../types';
+import { Dayjs } from 'dayjs';
+import { Schema } from 'mongoose';
+import { CustomObject } from '../../../../common/common.types';
+import {
+  AccessRightsWithOwner,
+  EventInviteAcceptedStatuses,
+} from '../../../../mongo/models/event-invite.model';
 import {
   CalendarPriorityKeys,
   EventLinkItem,
@@ -8,16 +13,11 @@ import {
   TaskStatusesType,
 } from '../../../../mongo/models/event.model';
 import { GroupsModelResponse } from '../../../../mongo/models/groups.model';
-import { Schema } from 'mongoose';
-import {
-  AccessRightsWithOwner,
-  EventInviteAcceptedStatuses,
-} from '../../../../mongo/models/event-invite.model';
-import { Dayjs } from 'dayjs';
+import { ApiResponse } from '../../../types';
+import { UserModelResponse, UtcDateString } from '../../session/types';
+import { ByEventIdType } from '../events/types';
 import { AnyObject } from '../history/helper/history.helper';
 import { AuthRequest, FilterTaskStatuses } from '../types';
-import { UserModelResponse, UtcDateString } from '../../session/types';
-import { CustomObject } from '../../../../common/common.types';
 
 export type DateInputValue = Dayjs | Date | string | undefined;
 
@@ -53,7 +53,8 @@ export interface BuildResponseEventObjectOptions {
 //Объект, описывающий обычное тело события, для запроса .get('planning/events/info/:eventId')
 export interface DefaultEventItemResponse
   extends DefaultEventResponseAfterOmit,
-    BuildResponseEventObjectOptions {
+    BuildResponseEventObjectOptions,
+    AdditionalEventFields {
   time: UtcDateString;
   timeEnd: UtcDateString;
   createdAt: UtcDateString;
@@ -77,10 +78,12 @@ export type ShortEventItemResponseFields =
   | 'isLiked'
   | 'userId'
   | 'treeId';
-export type ShortEventItemResponse = Pick<
-  DefaultEventItemResponse,
-  ShortEventItemResponseFields
->;
+export type ShortEventItemResponse = AdditionalEventFields &
+  Pick<DefaultEventItemResponse, ShortEventItemResponseFields>;
+
+export interface AdditionalEventFields {
+  isDelayed: boolean;
+}
 
 export type ChainsTypes = 'parentOf' | 'childOf';
 
