@@ -1,5 +1,5 @@
+import { Types } from 'mongoose';
 import { EventModelType } from '../../../../../mongo/models/event.model';
-import { Schema } from 'mongoose';
 
 interface NodeType<EventType = EventModelType> {
   _id: string;
@@ -24,12 +24,12 @@ interface BeforeMergeObject<EventType = EventModelType> {
 type ExtendableEventType = Pick<EventModelType, '_id' | 'parentId'>;
 
 interface CanImPushChildEventOptions {
-  childEventId: Array<Schema.Types.ObjectId>;
-  parentEventId: Schema.Types.ObjectId;
+  childEventId: Array<Types.ObjectId>;
+  parentEventId: Types.ObjectId;
 }
 
 interface CanImPushError {
-  forbiddenId: Array<Schema.Types.ObjectId>;
+  forbiddenId: Array<Types.ObjectId>;
   message: string;
 }
 

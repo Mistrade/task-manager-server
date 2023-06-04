@@ -1,9 +1,9 @@
 import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
+import { Schema, Types } from 'mongoose';
 
 export interface EventTreeModelType {
-  userId: Schema.Types.ObjectId;
-  _id: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
+  _id: Types.ObjectId;
 }
 
 const EventTreeSchema = new Schema({

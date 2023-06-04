@@ -1,8 +1,8 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 import { UserModelResponse } from '../../routes/public/session/types';
 
 export interface UserModelType {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   email?: string;
   phone: string;
   name?: string;

@@ -1,13 +1,13 @@
-import { AuthRequest } from '../types';
-import { ApiResponse } from '../../../types';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 import { CommentModelType } from '../../../../mongo/models/comment.model';
+import { ApiResponse } from '../../../types';
 import { DefaultEventItemResponse } from '../info/types';
+import { AuthRequest } from '../types';
 
 export interface CreateCommentProps {
   message: string;
-  eventId: Schema.Types.ObjectId;
-  sourceCommentId?: Schema.Types.ObjectId | null;
+  eventId: Types.ObjectId;
+  sourceCommentId?: Types.ObjectId | null;
 }
 
 export interface CommentResponseModel
@@ -23,21 +23,21 @@ export interface GetCommentByEventIdReturned {
 }
 
 export interface RemoveCommentProps {
-  commentId: Schema.Types.ObjectId;
+  commentId: Types.ObjectId;
 }
 
 export interface GetCommentListProps {
-  eventId: Schema.Types.ObjectId;
+  eventId: Types.ObjectId;
 }
 
 export interface UpdateCommentIsImportantState {
-  commentId: Schema.Types.ObjectId;
+  commentId: Types.ObjectId;
   fieldName: 'isImportant';
   state: 'toggle' | boolean;
 }
 
 export interface UpdateCommentMessageState {
-  commentId: Schema.Types.ObjectId;
+  commentId: Types.ObjectId;
   fieldName: 'content';
   state: Omit<CreateCommentProps, 'eventId'>;
 }

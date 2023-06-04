@@ -1,6 +1,6 @@
-import { ApiResponse } from '../../../types';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 import { EventHistoryQueryResult } from '../../../../mongo/models/event-history.model';
+import { ApiResponse } from '../../../types';
 import { AuthRequest } from '../types';
 
 export interface BuildHistoryItemOptions {
@@ -9,6 +9,6 @@ export interface BuildHistoryItemOptions {
 }
 
 export type HistoryListByEventIdFn = (
-  request: AuthRequest<null, { eventId: Schema.Types.ObjectId }>,
+  request: AuthRequest<null, { eventId: Types.ObjectId }>,
   response: ApiResponse<Array<EventHistoryQueryResult>>
 ) => Promise<ApiResponse<Array<EventHistoryQueryResult>>>;

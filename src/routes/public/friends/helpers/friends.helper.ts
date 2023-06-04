@@ -1,4 +1,4 @@
-import { HydratedDocument, Schema } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { objectIdIsEquals } from '../../../../common/common';
 import { IValidatePhoneOrEmail } from '../../../../common/types';
 import { Validate } from '../../../../common/validate';
@@ -57,8 +57,8 @@ export class FriendsHelper {
   }
 
   private async pushToUserFriendsList(
-    userId: Schema.Types.ObjectId,
-    pushedUserId: Schema.Types.ObjectId
+    userId: Types.ObjectId,
+    pushedUserId: Types.ObjectId
   ): Promise<void> {
     const userFriends = await FriendModel.findOne({
       user: userId,
@@ -339,7 +339,7 @@ export class FriendsHelper {
     });
   }
 
-  public async removeFriend(_id: Schema.Types.ObjectId): Promise<void> {
+  public async removeFriend(_id: Types.ObjectId): Promise<void> {
     if (!_id) {
       throw new ResponseException(
         ResponseException.createObject(

@@ -23,7 +23,7 @@ export class ResponseException<T> {
     return {
       status,
       json: {
-        data: data,
+        data,
         info: { type, message },
       },
     };
@@ -36,7 +36,7 @@ export class ResponseException<T> {
     return {
       status: 200,
       json: {
-        data,
+        data: data,
         info: { type: 'success', message: message || '' },
       },
     };
@@ -44,8 +44,8 @@ export class ResponseException<T> {
 }
 
 export const SuccessResponse = <T extends object | null>(
-  data: T,
-  response: ApiResponse<T>,
+  data: T | null,
+  response: ApiResponse<T | null>,
   message?: string
 ) => {
   const { status, json } = new ResponseException(
@@ -55,10 +55,10 @@ export const SuccessResponse = <T extends object | null>(
   return response.status(status).json(json);
 };
 
-export const CatchResponse = <T>(
-  error: T,
-  response: ApiResponse
-): ApiResponse => {
+export const CatchResponse = <T, R>(
+  error: T | null,
+  response: ApiResponse<R | null>
+): ApiResponse<R | null> => {
   const { status, json } = CatchErrorHandler(error);
   return response.status(status).json(json);
 };

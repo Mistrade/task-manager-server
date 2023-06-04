@@ -1,5 +1,6 @@
-import { SessionController } from '../../../session/session.controller';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
+import { utcDate } from '../../../../../common/common';
+import { HistoryDescription } from '../../../../../common/constants';
 import { ResponseException } from '../../../../../exceptions/response.exception';
 import {
   EventHistoryArrayToCreate,
@@ -12,12 +13,11 @@ import {
   EventHistorySnapshot,
   EventSnapshotCreateOptionalType,
 } from '../../../../../mongo/models/event-history.model';
-import { utcDate } from '../../../../../common/common';
-import { EventHelper } from '../../events/helpers/event.helper';
 import { EventModelType } from '../../../../../mongo/models/event.model';
-import { HistoryDescription } from '../../../../../common/constants';
-import { BuildHistoryItemOptions } from '../types';
+import { SessionController } from '../../../session/session.controller';
 import { UserModelResponse } from '../../../session/types';
+import { EventHelper } from '../../events/helpers/event.helper';
+import { BuildHistoryItemOptions } from '../types';
 
 export type AnyObject = {
   [key in string]: any;
@@ -64,7 +64,7 @@ export class HistoryHelper {
 
   //Метод, возвращающий количество записей в хранилище истории по eventId
   public async getHistoryCount(
-    eventId: Schema.Types.ObjectId,
+    eventId: Types.ObjectId,
     filters?: AnyObject
   ): Promise<{ result: number } & HistoryHelper> {
     EventHelper.checkEventId(eventId);
@@ -96,7 +96,7 @@ export class HistoryHelper {
 
   //Метод, возвращающей массив записей в истории по eventId
   public async getHistoryListByEventId(
-    eventId: Schema.Types.ObjectId,
+    eventId: Types.ObjectId,
     filters?: AnyObject
   ): Promise<Array<EventHistoryQueryResult>> {
     EventHelper.checkEventId(eventId);
@@ -167,7 +167,7 @@ export class HistoryHelper {
   }
 
   public async removeHistoryByEventId(
-    events: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>,
+    events: Types.ObjectId | Array<Types.ObjectId>,
     additionalFilters?: AnyObject
   ): Promise<HistoryHelper> {
     const filters: AnyObject = {};

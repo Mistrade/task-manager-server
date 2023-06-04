@@ -1,11 +1,11 @@
-import { Schema } from 'mongoose';
-import { ApiResponse } from '../../../types';
+import { Types } from 'mongoose';
 import {
   GroupsModelResponse,
   GroupsModelType,
 } from '../../../../mongo/models/groups.model';
-import { AuthRequest } from '../types';
+import { ApiResponse } from '../../../types';
 import { UserModelResponse } from '../../session/types';
+import { AuthRequest } from '../types';
 
 export interface GetGroupListRequestProps {
   exclude?: Array<GroupsModelType['type']>;
@@ -23,7 +23,7 @@ export interface CreateGroupProps {
 export interface UpdateGroupProps extends CreateGroupProps, GroupIdObject {}
 
 export interface GroupIdObject {
-  groupId: Schema.Types.ObjectId;
+  groupId: Types.ObjectId;
 }
 
 export interface GroupControllerObject {

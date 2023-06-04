@@ -1,26 +1,26 @@
 import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
-import { utcDate } from '../../common/common';
+import { Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
+import { utcDate } from '../../common/common';
 import { UserModelResponse } from '../../routes/public/session/types';
 
 export interface CommentSchemaType {
-  eventId: Schema.Types.ObjectId;
-  userId: Schema.Types.ObjectId;
+  eventId: Types.ObjectId;
+  userId: Types.ObjectId;
   date?: Date;
   message: string;
-  sourceComment?: null | Schema.Types.ObjectId;
+  sourceComment?: null | Types.ObjectId;
 }
 
 export interface CommentModelType {
-  _id: Schema.Types.ObjectId;
-  eventId: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
+  eventId: Types.ObjectId;
   userId: UserModelResponse;
   date: Date;
   message: string;
   sourceComment?: CommentModelType | null;
   updatedAt: Date;
-  likedUsers?: Array<Schema.Types.ObjectId>;
+  likedUsers?: Array<Types.ObjectId>;
 }
 
 export const CommentSchema = new Schema({

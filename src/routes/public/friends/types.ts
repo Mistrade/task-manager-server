@@ -1,16 +1,16 @@
-import { AuthRequest } from '../plannings/types';
-import { ApiResponse } from '../../types';
-import { UserModelResponse } from '../session/types';
+import { Types } from 'mongoose';
 import { TContactsSchemaDefault } from '../../../mongo/models/contacts.model';
-import { Schema } from 'mongoose';
 import { TFriendRequestStatuses } from '../../../mongo/models/friend-request.model';
+import { ApiResponse } from '../../types';
+import { AuthRequest } from '../plannings/types';
+import { UserModelResponse } from '../session/types';
 
 export interface IContactsRequestProps {
   addContact: IAddContactRequestProps;
   getContacts: { contactType: IGetContactsProps['type'] };
   responseOnFriendsOrder: IResponseOnFriendsOrderRequestProps;
   removeFriend: {
-    _id: Schema.Types.ObjectId;
+    _id: Types.ObjectId;
   };
 }
 
@@ -38,7 +38,7 @@ export type TGetContactsResponseArray = Array<TGetContactsResponseObject>;
 
 export interface IResponseOnFriendsOrderRequestProps {
   acceptedStatus: TFriendRequestStatuses;
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
 }
 
 export interface IContactsController {

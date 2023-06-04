@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 import { objectIdIsEquals } from '../../../../../common/common';
 import { minimalRootsMap } from '../../../../../common/constants';
 import { ResponseException } from '../../../../../exceptions/response.exception';
@@ -46,7 +46,7 @@ export class EventCheckingHelper extends EventStorageHelper {
    * @param eventId - необязательный параметр, проверяется только наличие значение в этом агрументе
    * @return {void}
    */
-  public static checkEventId(eventId?: Schema.Types.ObjectId): void {
+  public static checkEventId(eventId?: Types.ObjectId): void {
     if (!eventId) {
       throw new ResponseException(
         ResponseException.createObject(

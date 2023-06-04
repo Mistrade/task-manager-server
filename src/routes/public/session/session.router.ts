@@ -1,13 +1,13 @@
-import express from 'express';
-import { UserModel, UserModelType } from '../../../mongo/models/user.model';
 import bcrypt from 'bcryptjs';
-import { validateTools } from '../../../common/tools/validate';
 import dayjs from 'dayjs';
+import express from 'express';
 import JWT from 'jsonwebtoken';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
+import { createBaseCalendars } from '../../../common/common';
+import { validateTools } from '../../../common/tools/validate';
 import { Config } from '../../../config/config';
 import { SessionModel } from '../../../mongo/models/session.model';
-import { createBaseCalendars } from '../../../common/common';
+import { UserModel, UserModelType } from '../../../mongo/models/user.model';
 import { CustomResponseBody } from '../plannings/types';
 import { RegistrationRequestBody } from './types';
 
@@ -16,7 +16,7 @@ const route = express.Router();
 const regExpPhone = new RegExp(/^7\d{10}$/, 'gi');
 
 export interface JWTAccessTokenPayload {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   phone: string;
 }
 

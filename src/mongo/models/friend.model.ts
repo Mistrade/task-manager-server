@@ -1,17 +1,17 @@
 import * as mongoose from 'mongoose';
-import { Model, Schema } from 'mongoose';
+import { Model, Schema, Types } from 'mongoose';
 import { SelectedPopulateUserFields, UserModelType } from './user.model';
 
 export interface IFriendsSchema {
-  user: Schema.Types.ObjectId;
-  friendsList: Array<Schema.Types.ObjectId>;
-  _id: Schema.Types.ObjectId;
+  user: Types.ObjectId;
+  friendsList: Array<Types.ObjectId>;
+  _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface IFriendsModel<T = Schema.Types.ObjectId> {
-  _id: Schema.Types.ObjectId;
+export interface IFriendsModel<T = Types.ObjectId> {
+  _id: Types.ObjectId;
   user: Omit<UserModelType, 'password'>;
   friendsList: Array<T>;
   createdAt: Date;
@@ -19,7 +19,7 @@ export interface IFriendsModel<T = Schema.Types.ObjectId> {
 }
 
 interface FriendsModelForSchema extends Model<IFriendsModel> {
-  findByUser(userId: Schema.Types.ObjectId): IFriendsModel;
+  findByUser(userId: Types.ObjectId): IFriendsModel;
 }
 
 const FriendSchema = new Schema<IFriendsModel, FriendsModelForSchema>(

@@ -1,5 +1,17 @@
-import { UserModelResponse } from '../../session/types';
+import { HydratedDocument, QueryOptions, Types } from 'mongoose';
+import validator from 'validator';
+import { ResponseException } from '../../../../exceptions/response.exception';
+import {
+  CheckListModel,
+  ICheckListSchema,
+} from '../../../../mongo/models/check-list.model';
+import {
+  EventModel,
+  EventModelType,
+} from '../../../../mongo/models/event.model';
 import { SessionController } from '../../session/session.controller';
+import { UserModelResponse } from '../../session/types';
+import { AnyObject } from '../history/helper/history.helper';
 import {
   CheckListUpdateCreateNewElementRequest,
   CheckListUpdateDeleteElementRequest,
@@ -10,18 +22,6 @@ import {
   ICreateCheckListItemProps,
   ICreateCheckListProps,
 } from './types';
-import validator from 'validator';
-import { ResponseException } from '../../../../exceptions/response.exception';
-import {
-  CheckListModel,
-  ICheckListSchema,
-} from '../../../../mongo/models/check-list.model';
-import { HydratedDocument, QueryOptions, Schema } from 'mongoose';
-import {
-  EventModel,
-  EventModelType,
-} from '../../../../mongo/models/event.model';
-import { AnyObject } from '../history/helper/history.helper';
 
 export class CheckListHelper {
   private user: UserModelResponse;
@@ -51,7 +51,7 @@ export class CheckListHelper {
   }
 
   public async updCheckListById(
-    _id: Schema.Types.ObjectId,
+    _id: Types.ObjectId,
     data: AnyObject,
     options?: QueryOptions
   ): Promise<HydratedDocument<ICheckListSchema> | null> {
@@ -212,7 +212,7 @@ export class CheckListHelper {
   }
 
   public async getCheckListByEventId(
-    eventId: Schema.Types.ObjectId
+    eventId: Types.ObjectId
   ): Promise<null | ICheckListSchema> {
     if (!eventId) {
       throw new ResponseException(
@@ -252,14 +252,14 @@ export class CheckListHelper {
   }
 
   public async getCheckListById(
-    _id: Schema.Types.ObjectId
+    _id: Types.ObjectId
   ): Promise<ICheckListSchema | null> {
     return CheckListModel.findById(_id);
   }
 
   public async associateCheckListWithEvent(
-    checkListId: Schema.Types.ObjectId,
-    eventId: Schema.Types.ObjectId
+    checkListId: Types.ObjectId,
+    eventId: Types.ObjectId
   ) {
     const checkListItem = await this.getCheckListById(checkListId);
 

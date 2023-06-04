@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
-import { UserModelResponse } from '../../routes/public/session/types';
+import { Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
+import { UserModelResponse } from '../../routes/public/session/types';
 
 export enum ContactAcceptStatuses {
   'CREATED' = 0,
@@ -23,9 +23,9 @@ export function contactAcceptStatusConverter(
 }
 
 export interface IContactsSchema {
-  _id: Schema.Types.ObjectId;
-  requestUser: Schema.Types.ObjectId;
-  responseUser: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
+  requestUser: Types.ObjectId;
+  responseUser: Types.ObjectId;
   acceptedStatus: ContactAcceptStatuses;
   createdAt: Date;
   updatedAt: Date;

@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
-import { SelectedPopulateUserFields, TUserOmitPassword } from './user.model';
+import { Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
+import { SelectedPopulateUserFields, TUserOmitPassword } from './user.model';
 
 export type TFriendRequestStatuses = 'created' | 'decline' | 'accepted';
 
@@ -19,14 +19,14 @@ export enum FRIENDS_REQUEST_TYPES {
 }
 
 interface IDefaultFriendRequestFields {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface IFriendRequestSchema {
-  fromUser: Schema.Types.ObjectId;
-  toUser: Schema.Types.ObjectId;
+  fromUser: Types.ObjectId;
+  toUser: Types.ObjectId;
   acceptedStatus: TFriendRequestStatuses;
 }
 
@@ -72,7 +72,7 @@ const FriendRequestSchema = new Schema<IFriendRequestModel>(
     timestamps: true,
     statics: {
       async findIncomingRequests(
-        userId: Schema.Types.ObjectId
+        userId: Types.ObjectId
       ): Promise<Array<IFriendRequestModel> | null> {
         return await this.find({
           acceptedStatus: 'created',
@@ -80,7 +80,7 @@ const FriendRequestSchema = new Schema<IFriendRequestModel>(
         });
       },
       async findOutgoingRequests(
-        userId: Schema.Types.ObjectId
+        userId: Types.ObjectId
       ): Promise<Array<IFriendRequestModel> | null> {
         return await this.find<IFriendRequestModel>({
           acceptedStatus: 'created',

@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { Schema } from 'mongoose';
+import { Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
 
 export type EventInviteAcceptedStatuses =
@@ -10,12 +10,12 @@ export type EventInviteAccessRights = 'viewer' | 'editor' | 'admin';
 export type AccessRightsWithOwner = EventInviteAccessRights | 'owner';
 
 export interface EventInviteQueryType {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   createdAt: Date; //создано
   updatedAt: Date; //обновлено
-  invitedUser: Schema.Types.ObjectId; //кого пригласили к событию
-  event: Schema.Types.ObjectId; //Ссылка на само событие
-  whoInvited: Schema.Types.ObjectId; //кто пригласил
+  invitedUser: Types.ObjectId; //кого пригласили к событию
+  event: Types.ObjectId; //Ссылка на само событие
+  whoInvited: Types.ObjectId; //кто пригласил
   accessRights: EventInviteAccessRights; //Права доступа
   acceptedStatus: EventInviteAcceptedStatuses; //Статус приглашения
 }

@@ -1,40 +1,40 @@
 import {
-  EventModel,
-  EventModelInvitesObject,
-  EventModelType,
-} from '../../../../../mongo/models/event.model';
-import {
   HydratedDocument,
   InferSchemaType,
   PopulateOptions,
   QueryOptions,
 } from 'mongoose';
-import { SessionController } from '../../../session/session.controller';
-import { ResponseException } from '../../../../../exceptions/response.exception';
 import { objectIdIsEquals, utcDate } from '../../../../../common/common';
-import { EventHandler_Create_RequestData } from '../types';
-import { GroupsHelper } from '../../groups/helpers/groups.helper';
-import { EventInfoHelper } from '../../info/helpers/event-info.helper';
-import { HistoryHelper } from '../../history/helper/history.helper';
+import { ResponseException } from '../../../../../exceptions/response.exception';
 import { EventHistoryCreateType } from '../../../../../mongo/models/event-history.model';
-import { RootsFilterType } from './types';
-import {
-  UserModel,
-  UserModelType,
-} from '../../../../../mongo/models/user.model';
 import {
   EventInviteModel,
   EventInviteQueryType,
 } from '../../../../../mongo/models/event-invite.model';
-import { EventBuildHelper } from './event-build.helper';
+import {
+  EventModel,
+  EventModelInvitesObject,
+  EventModelType,
+} from '../../../../../mongo/models/event.model';
+import {
+  UserModel,
+  UserModelType,
+} from '../../../../../mongo/models/user.model';
+import { SessionController } from '../../../session/session.controller';
+import { UserModelResponse } from '../../../session/types';
+import { CheckListHelper } from '../../check-list/check-list.helper';
+import { CommentsHelper } from '../../comments/helpers/comments.helper';
+import { GroupsHelper } from '../../groups/helpers/groups.helper';
+import { HistoryHelper } from '../../history/helper/history.helper';
+import { EventInfoHelper } from '../../info/helpers/event-info.helper';
 import {
   RequestEventFilters,
   ReturnEventTypeAfterBuild,
 } from '../../info/types';
 import { EventModelFilters } from '../../types';
-import { CommentsHelper } from '../../comments/helpers/comments.helper';
-import { UserModelResponse } from '../../../session/types';
-import { CheckListHelper } from '../../check-list/check-list.helper';
+import { EventHandler_Create_RequestData } from '../types';
+import { EventBuildHelper } from './event-build.helper';
+import { RootsFilterType } from './types';
 
 export class EventHelper extends EventBuildHelper {
   public user: UserModelResponse;

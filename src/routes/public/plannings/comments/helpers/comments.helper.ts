@@ -1,23 +1,23 @@
-import { SessionController } from '../../../session/session.controller';
+import { HydratedDocument, Types } from 'mongoose';
+import { objectIdIsEquals } from '../../../../../common/common';
+import { ResponseException } from '../../../../../exceptions/response.exception';
 import {
   CommentModel,
   CommentModelType,
 } from '../../../../../mongo/models/comment.model';
-import { objectIdIsEquals } from '../../../../../common/common';
 import {
   EventModel,
   EventModelType,
 } from '../../../../../mongo/models/event.model';
-import { HydratedDocument, Schema } from 'mongoose';
+import { SessionController } from '../../../session/session.controller';
+import { UserModelResponse } from '../../../session/types';
+import { EventHelper } from '../../events/helpers/event.helper';
+import { DefaultEventItemResponse } from '../../info/types';
 import {
   CommentResponseModel,
   CreateCommentProps,
   GetCommentByEventIdReturned,
 } from '../types';
-import { EventHelper } from '../../events/helpers/event.helper';
-import { ResponseException } from '../../../../../exceptions/response.exception';
-import { DefaultEventItemResponse } from '../../info/types';
-import { UserModelResponse } from '../../../session/types';
 
 export class CommentsHelper {
   public user: UserModelResponse;
@@ -59,10 +59,7 @@ export class CommentsHelper {
     };
   }
 
-  private canIDelete(
-    comment: CommentModelType,
-    eventCreator: Schema.Types.ObjectId
-  ) {
+  private canIDelete(comment: CommentModelType, eventCreator: Types.ObjectId) {
     const isEventCreator = objectIdIsEquals(eventCreator, this.user._id);
     const isCommentCreator = objectIdIsEquals(
       comment.userId._id,
@@ -73,7 +70,7 @@ export class CommentsHelper {
   }
 
   public async getCommentById(
-    id: Schema.Types.ObjectId,
+    id: Types.ObjectId,
     throwMessage?: string
   ): Promise<HydratedDocument<CommentModelType>> {
     const comment = await CommentModel.findOne({
@@ -158,7 +155,7 @@ export class CommentsHelper {
     return createdComment;
   }
 
-  public async removeComment(commentId?: Schema.Types.ObjectId) {
+  public async removeComment(commentId?: Types.ObjectId) {
     if (!commentId) {
       throw new ResponseException(
         ResponseException.createObject(
@@ -211,7 +208,7 @@ export class CommentsHelper {
   }
 
   public async getCommentsByEventId(
-    eventId: Schema.Types.ObjectId
+    eventId: Types.ObjectId
   ): Promise<GetCommentByEventIdReturned> {
     if (!eventId) {
       throw new ResponseException(
@@ -250,7 +247,7 @@ export class CommentsHelper {
   }
 
   public async getBuildCommentsList(
-    eventId: Schema.Types.ObjectId
+    eventId: Types.ObjectId
   ): Promise<Array<CommentResponseModel>> {
     const { comments, buildEvent } = await this.getCommentsByEventId(eventId);
 
@@ -258,7 +255,7 @@ export class CommentsHelper {
   }
 
   public async removeCommentsByEventId(
-    eventId: Schema.Types.ObjectId | Array<Schema.Types.ObjectId>,
+    eventId: Types.ObjectId | Array<Types.ObjectId>,
     disableCheckRoots = false
   ): Promise<boolean> {
     if (!eventId || (Array.isArray(eventId) && eventId?.length === 0)) {

@@ -1,16 +1,16 @@
-import { ApiResponse } from '../../../types';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
+import { EventInviteAccessRights } from '../../../../mongo/models/event-invite.model';
 import {
   CalendarPriorityKeys,
   EventLinkItem,
   ICheckListItem,
   TaskStatusesType,
 } from '../../../../mongo/models/event.model';
-import { EventInviteAccessRights } from '../../../../mongo/models/event-invite.model';
+import { ApiResponse } from '../../../types';
 import { AuthRequest } from '../types';
 
 export interface ByEventIdType {
-  eventId: Schema.Types.ObjectId;
+  eventId: Types.ObjectId;
 }
 
 export interface EventHandler_Create_RequestData {
@@ -22,11 +22,11 @@ export interface EventHandler_Create_RequestData {
   timeEnd: string;
   link: EventLinkItem | null;
   description?: string;
-  group: Schema.Types.ObjectId;
-  linkedFrom?: Schema.Types.ObjectId;
-  parentId?: Schema.Types.ObjectId;
+  group: Types.ObjectId;
+  linkedFrom?: Types.ObjectId;
+  parentId?: Types.ObjectId;
   members?: Array<{
-    _id: Schema.Types.ObjectId;
+    _id: Types.ObjectId;
     accessRights: EventInviteAccessRights;
   }>;
   attachCheckList: boolean;

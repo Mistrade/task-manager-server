@@ -1,4 +1,5 @@
 import express from 'express';
+import { InvitesRouter } from '../invites/invites.router';
 import {
   getEventCounterOfStatuses,
   getEventInfoByEventId,
@@ -18,5 +19,6 @@ router.post('/get_events_count_of_statuses', getEventCounterOfStatuses);
 router.post('/get_events_scheme', getEventsScheme);
 router.post('/update', updateEventInfo);
 router.get('/:eventId', getEventInfoByEventId);
+router.use(InvitesRouter);
 
 export const EventInfoRouter = router;

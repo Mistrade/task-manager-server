@@ -1,6 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
-import { HydratedDocument, Schema } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import {
+  escapeRegExp,
   objectIdInArrayOfAnotherObjectId,
   objectIdIsEquals,
   utcDate,
@@ -276,7 +277,7 @@ export class EventBuildHelper extends EventCheckingHelper {
     if (title) {
       //Записываю в объект запроса
       result.title = {
-        $regex: `${title}`,
+        $regex: `${escapeRegExp(title)}`,
         $options: 'i',
       };
     }
@@ -473,7 +474,7 @@ export class EventBuildHelper extends EventCheckingHelper {
       status: event.status, //Статус события
       invites: event.invites //Список приглашений
         .map((i) => i.inviteId?._id || null)
-        .filter((i): i is Schema.Types.ObjectId => i !== null),
+        .filter((i): i is Types.ObjectId => i !== null),
       acceptedStatus: isCreator
         ? undefined
         : invite?.inviteId?.acceptedStatus || 'not_accepted', //Статус принятия события приглашенным пользователем

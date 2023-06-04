@@ -1,21 +1,21 @@
-import { SessionController } from '../../../session/session.controller';
+import { HydratedDocument, Types } from 'mongoose';
+import { ResponseException } from '../../../../../exceptions/response.exception';
+import { UserModelHelper } from '../../../../../mongo/helpers/user.helper';
 import {
   GroupModel,
   GroupsModelResponse,
   GroupsModelType,
 } from '../../../../../mongo/models/groups.model';
-import { HydratedDocument, Schema } from 'mongoose';
-import { ResponseException } from '../../../../../exceptions/response.exception';
-import { UserModelHelper } from '../../../../../mongo/helpers/user.helper';
 import { UserModelType } from '../../../../../mongo/models/user.model';
+import { SessionController } from '../../../session/session.controller';
+import { UserModelResponse } from '../../../session/types';
+import { EventHelper } from '../../events/helpers/event.helper';
 import {
   ChangeGroupSelectRequestProps,
   CreateGroupProps,
   GetGroupListRequestProps,
 } from '../types';
 import { GroupsValidator } from './groups.validator';
-import { EventHelper } from '../../events/helpers/event.helper';
-import { UserModelResponse } from '../../../session/types';
 
 export type MongoFilters<T extends object> = {
   [key in keyof T]?: T[key];
@@ -87,7 +87,7 @@ export class GroupsHelper extends GroupsValidator {
   }
 
   public async getGroup(
-    filters?: MongoFilters<GroupsModelType<Schema.Types.ObjectId>>
+    filters?: MongoFilters<GroupsModelType<Types.ObjectId>>
   ): Promise<HydratedDocument<GroupsModelType>> {
     const result: HydratedDocument<GroupsModelType<UserModelType>> | null =
       await GroupModel.findOne({
@@ -109,7 +109,7 @@ export class GroupsHelper extends GroupsValidator {
   }
 
   public async resolveGroup(
-    groupId?: Schema.Types.ObjectId
+    groupId?: Types.ObjectId
   ): Promise<HydratedDocument<GroupsModelType>> {
     if (!groupId) {
       return await this.getGroup({
@@ -205,7 +205,7 @@ export class GroupsHelper extends GroupsValidator {
     return resultGroup;
   }
 
-  public async remove(groupId: Schema.Types.ObjectId): Promise<void> {
+  public async remove(groupId: Types.ObjectId): Promise<void> {
     const groupItem = await GroupModel.findOne({
       userId: this.user._id,
       _id: groupId,
@@ -240,7 +240,7 @@ export class GroupsHelper extends GroupsValidator {
   }
 
   public async updateGroupInfo(
-    groupId: Schema.Types.ObjectId,
+    groupId: Types.ObjectId,
     props: CreateGroupProps
   ) {
     const { title, color } = props;

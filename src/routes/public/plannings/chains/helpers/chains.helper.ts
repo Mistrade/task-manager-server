@@ -1,16 +1,16 @@
-import {
-  EventModelType,
-  EventModelWithPopulatedChains,
-} from '../../../../../mongo/models/event.model';
-import { HydratedDocument, Schema } from 'mongoose';
-import { EventHelper } from '../../events/helpers/event.helper';
+import { HydratedDocument, Types } from 'mongoose';
 import {
   CatchErrorHandler,
   ResponseException,
 } from '../../../../../exceptions/response.exception';
-import { ResponseGetChainsByEventId } from '../types';
-import { ShortEventItemResponse } from '../../info/types';
+import {
+  EventModelType,
+  EventModelWithPopulatedChains,
+} from '../../../../../mongo/models/event.model';
 import { UserModelResponse } from '../../../session/types';
+import { EventHelper } from '../../events/helpers/event.helper';
+import { ShortEventItemResponse } from '../../info/types';
+import { ResponseGetChainsByEventId } from '../types';
 
 export class ChainsHelper {
   public user?: UserModelResponse;
@@ -20,7 +20,7 @@ export class ChainsHelper {
   }
 
   public async getChainsByEventId(
-    eventId: Schema.Types.ObjectId
+    eventId: Types.ObjectId
   ): Promise<ResponseGetChainsByEventId> {
     EventHelper.checkEventId(eventId);
 

@@ -1,18 +1,18 @@
-import { ConnectChildrenEventFn, GetChainsByEventIdFn } from './types';
+import { HydratedDocument, Types } from 'mongoose';
 import {
   CatchErrorHandler,
   ResponseException,
 } from '../../../../exceptions/response.exception';
-import { ChainsHelper } from './helpers/chains.helper';
-import { SessionController } from '../../session/session.controller';
 import {
   EventModel,
   EventModelType,
 } from '../../../../mongo/models/event.model';
+import { SessionController } from '../../session/session.controller';
 import { EventHelper } from '../events/helpers/event.helper';
-import { HydratedDocument, Schema } from 'mongoose';
-import { TreeValidator } from './helpers/tree.validator';
 import { HistoryHelper } from '../history/helper/history.helper';
+import { ChainsHelper } from './helpers/chains.helper';
+import { TreeValidator } from './helpers/tree.validator';
+import { ConnectChildrenEventFn, GetChainsByEventIdFn } from './types';
 
 export const getChainsByEventId: GetChainsByEventIdFn = async (
   request,
@@ -192,8 +192,10 @@ export const connectChildrenEvent: ConnectChildrenEventFn = async (
         throw new ResponseException(err);
       });
 
-    const treeId: Schema.Types.ObjectId =
-      await TreeValidator.getTreeIdForUpdate(currentEvent.treeId, user);
+    const treeId: Types.ObjectId = await TreeValidator.getTreeIdForUpdate(
+      currentEvent.treeId,
+      user
+    );
     const historyApi = new HistoryHelper(user);
 
     const history = [
@@ -211,7 +213,7 @@ export const connectChildrenEvent: ConnectChildrenEventFn = async (
 
     const parentsWhoLoseChildren = addedEvents
       .map((item) => item.parentId)
-      .filter((value): value is Schema.Types.ObjectId => !!value);
+      .filter((value): value is Types.ObjectId => !!value);
 
     if (parentsWhoLoseChildren.length > 0) {
       const parentsForRemovedChildren: Array<EventModelType> | null =

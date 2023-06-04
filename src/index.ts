@@ -1,13 +1,13 @@
-import cors from 'cors';
-import express from 'express';
 import cookieParser from 'cookie-parser';
-import { connect } from 'mongoose';
-import { ApiRouter } from './routes/public/api.router';
+import cors from 'cors';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import utc from 'dayjs/plugin/utc';
+import express from 'express';
+import { connect } from 'mongoose';
 import morgan from 'morgan';
+import { ApiRouter } from './routes/public/api.router';
 
 dayjs.extend(utc);
 dayjs.extend(isSameOrBefore);
@@ -16,12 +16,7 @@ dayjs.extend(isSameOrAfter);
 const app = express();
 const port = 9090;
 app.use(express.json());
-// const logStream = fs.createWriteStream(
-//   path.join(__dirname, 'logs/access.log'),
-//   {
-//     flags: 'a',
-//   }
-// );
+
 app.use(morgan('combined'));
 app.use(
   cors({
@@ -44,7 +39,10 @@ app.use('/api', ApiRouter);
 const start = async (times: number) => {
   try {
     await connect(
-      'mongodb://admin:admin@db_mongo:27017/admin?authSource=admin',
+      'mongodb://admin:admin@db_mongo:27017/?authMechanism=DEFAULT&authSource=admin',
+      {
+        dbName: 'admin',
+      },
       (err) => {
         if (err) {
           console.log('Connection error: ', err);

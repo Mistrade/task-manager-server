@@ -1,25 +1,25 @@
-import * as mongoose from 'mongoose';
-import { HydratedDocument, Schema } from 'mongoose';
 import dayjs from 'dayjs';
+import * as mongoose from 'mongoose';
+import { HydratedDocument, Schema, Types } from 'mongoose';
+import autopopulate from 'mongoose-autopopulate';
+import { utcDate } from '../../common/common';
+import { DbTaskPriorities, DbTaskStatuses } from '../../common/constants';
+import { UserModelResponse } from '../../routes/public/session/types';
+import { UserModelHelper } from '../helpers/user.helper';
 import {
   EventLinkItem,
   LinkSchema,
   PriorityKeys,
   TaskStatusesType,
 } from './event.model';
-import { UserModelHelper } from '../helpers/user.helper';
-import autopopulate from 'mongoose-autopopulate';
-import { DbTaskPriorities, DbTaskStatuses } from '../../common/constants';
 import { GroupsModelResponse, GroupsModelType } from './groups.model';
-import { utcDate } from '../../common/common';
-import { UserModelResponse } from '../../routes/public/session/types';
 
 //Интерфейс объекта, предназначенного для записи объекта истории в базу, включающий только обязательные поля схемы
 export interface CreateSnapshotDefaultFields {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   createdAt: Date;
-  user: Schema.Types.ObjectId;
-  originalEventId: Schema.Types.ObjectId;
+  user: Types.ObjectId;
+  originalEventId: Types.ObjectId;
   title: string;
   priority: PriorityKeys;
   status: TaskStatusesType;
@@ -28,12 +28,12 @@ export interface CreateSnapshotDefaultFields {
 //Интерфейс объекта, предназначенного для записи объекта истории в базу, включающий только необязательные поля схемы
 export interface EventSnapshotCreateOptionalType {
   checkList?: string | null; //Название чек-листа
-  group?: Schema.Types.ObjectId | null;
+  group?: Types.ObjectId | null;
   description?: string;
   insertChildOfEvents?: Array<EventHistoryRequiredFields>;
   removeChildOfEvents?: Array<EventHistoryRequiredFields>;
-  sendInvites?: Array<Schema.Types.ObjectId>;
-  closeInvites?: Array<Schema.Types.ObjectId>;
+  sendInvites?: Array<Types.ObjectId>;
+  closeInvites?: Array<Types.ObjectId>;
   link?: EventLinkItem | null;
   parentEvent?: EventHistoryRequiredFields | null;
   linkedFrom?: EventHistoryRequiredFields | null;
@@ -83,9 +83,9 @@ export interface EventHistoryCreateType<
   //Имя ключа, который был отредактирован
   fieldName: Key;
   //Id пользователя, вносившего изменения
-  changeUserId: Schema.Types.ObjectId;
+  changeUserId: Types.ObjectId;
   //Id события, за которым будет закреплен объект истории
-  eventId: Schema.Types.ObjectId;
+  eventId: Types.ObjectId;
   //Описание изменений
   snapshotDescription: string;
   //Скриншот события, после внесения обновлений
@@ -113,13 +113,13 @@ export type EventHistoryArrayToCreate<FieldNames extends Fields> = Array<
 //Интерфейс объекта истории, который возвращается из базы с заполнением полей, содержащий только обязательные поля
 export interface QuerySnapshotRequiredFields {
   //id записи
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   //Когда событие было создано
   createdAt: Date;
   //Кто создал событие
   user: UserModelResponse | null;
   //id актуального события
-  originalEventId: Schema.Types.ObjectId | null;
+  originalEventId: Types.ObjectId | null;
   //Заголовок или название
   title: string;
   //Приоритет события
@@ -171,7 +171,7 @@ export interface EventHistoryQueryResult {
   //Юзер, который производил изменения
   changeUserId: UserModelResponse | null;
   //Id, за которым закреплена запись истории
-  eventId: Schema.Types.ObjectId | null;
+  eventId: Types.ObjectId | null;
   //Описание записи истории
   snapshotDescription: string;
   //Скриншот события для истории
@@ -202,7 +202,7 @@ const SnapshotRequiredSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Event',
     required: true,
-    get(value: Schema.Types.ObjectId | null): Schema.Types.ObjectId | null {
+    get(value: Types.ObjectId | null): Types.ObjectId | null {
       if (!value) return null;
       return value;
     },

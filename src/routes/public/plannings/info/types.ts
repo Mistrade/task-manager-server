@@ -1,5 +1,5 @@
 import { Dayjs } from 'dayjs';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 import { CustomObject } from '../../../../common/common.types';
 import {
   AccessRightsWithOwner,
@@ -61,7 +61,7 @@ export interface DefaultEventItemResponse
   updatedAt: UtcDateString;
   userId: UserModelResponse;
   group: GroupsModelResponse | null;
-  invites: Array<Schema.Types.ObjectId>;
+  invites: Array<Types.ObjectId>;
   isLiked: boolean;
 }
 
@@ -98,13 +98,13 @@ export interface RequestEventFilters {
   utcOffset?: number;
   findOnlyInSelectedGroups?: boolean;
   exclude?: {
-    eventIds?: Array<Schema.Types.ObjectId>;
-    linkedFrom?: Schema.Types.ObjectId;
-    parentId?: Schema.Types.ObjectId;
+    eventIds?: Array<Types.ObjectId>;
+    linkedFrom?: Types.ObjectId;
+    parentId?: Types.ObjectId;
   };
   chainsFilter?: {
     type: ChainsTypes;
-    eventId: Schema.Types.ObjectId;
+    eventId: Types.ObjectId;
   }; //учитывать тип связей
 }
 
@@ -138,43 +138,43 @@ export type EventSchemeResponse = {
 };
 
 export interface UpdateEventPriority {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'priority';
   data: PriorityKeys;
 }
 
 export interface UpdateEventStatus {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'status';
   data: TaskStatusesType;
 }
 
 export interface UpdateEventLinkItem {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'link';
   data: EventLinkItem | null;
 }
 
 export interface UpdateEventTime {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'time' | 'timeEnd';
   data: UtcDateString;
 }
 
 export interface UpdateEventTitleOrDescription {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'title' | 'description';
   data: string;
 }
 
 export interface UpdateEventGroup {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'group';
-  data: Schema.Types.ObjectId;
+  data: Types.ObjectId;
 }
 
 export interface UpdateEventIsLiked {
-  id: Schema.Types.ObjectId;
+  id: Types.ObjectId;
   field: 'isLiked';
   data: boolean;
 }

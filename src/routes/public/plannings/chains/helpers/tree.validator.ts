@@ -1,16 +1,16 @@
-import {
-  EventModel,
-  EventModelType,
-} from '../../../../../mongo/models/event.model';
-import { Schema } from 'mongoose';
+import { Types } from 'mongoose';
 import { ResponseException } from '../../../../../exceptions/response.exception';
-import { EventHelper } from '../../events/helpers/event.helper';
-import { EventTree } from './tree.helper';
 import {
   EventTreeModel,
   EventTreeModelType,
 } from '../../../../../mongo/models/event-tree.model';
+import {
+  EventModel,
+  EventModelType,
+} from '../../../../../mongo/models/event.model';
 import { UserModelResponse } from '../../../session/types';
+import { EventHelper } from '../../events/helpers/event.helper';
+import { EventTree } from './tree.helper';
 
 type PlaneTree = {
   [key: string]: Array<EventModelType>;
@@ -39,9 +39,9 @@ export class TreeValidator {
   }
 
   static async getTreeIdForUpdate(
-    treeId: Schema.Types.ObjectId | null,
+    treeId: Types.ObjectId | null,
     user: UserModelResponse
-  ): Promise<Schema.Types.ObjectId> {
+  ): Promise<Types.ObjectId> {
     if (!treeId) {
       const createdTree: EventTreeModelType | null =
         await EventTreeModel.create({
@@ -203,7 +203,7 @@ export class TreeValidator {
     const currentEventTreeId = currentEvent.treeId?.toString() || null;
 
     const treesIntersections: Array<EventModelType> = [];
-    const trees: Set<Schema.Types.ObjectId> = new Set();
+    const trees: Set<Types.ObjectId> = new Set();
     const eventIdsList: Array<string> = [];
 
     arr.forEach((item) => {

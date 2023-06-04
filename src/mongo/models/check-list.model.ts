@@ -1,22 +1,22 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 
 export interface ICheckListItemSchema {
   title: string;
   state: boolean;
-  eventLink?: Schema.Types.ObjectId | null;
-  responsibleUser?: Schema.Types.ObjectId | null;
+  eventLink?: Types.ObjectId | null;
+  responsibleUser?: Types.ObjectId | null;
   timeLimit?: Date | null;
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface ICheckListSchema {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   title: string;
-  eventId: Schema.Types.ObjectId;
+  eventId: Types.ObjectId;
   data: Array<ICheckListItemSchema>;
 }
 

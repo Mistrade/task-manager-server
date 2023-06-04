@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
-import { UserModelType } from '../mongo/models/user.model';
+import { Types } from 'mongoose';
 import { GroupModel } from '../mongo/models/groups.model';
-import { Schema } from 'mongoose';
+import { UserModelType } from '../mongo/models/user.model';
 import { UserModelResponse } from '../routes/public/session/types';
 
 export const createBaseCalendars = async (
@@ -51,15 +51,15 @@ export const utcDate = (date?: Date | dayjs.Dayjs | string): Date => {
 };
 
 export const objectIdIsEquals = (
-  userObjectId1: Schema.Types.ObjectId,
-  userObjectId2: Schema.Types.ObjectId
+  userObjectId1: Types.ObjectId,
+  userObjectId2: Types.ObjectId
 ) => {
   return userObjectId1.toString() === userObjectId2.toString();
 };
 
 export const objectIdInArrayOfAnotherObjectId = (
-  userId: Schema.Types.ObjectId,
-  usersArray: Array<{ _id: Schema.Types.ObjectId } | Schema.Types.ObjectId>
+  userId: Types.ObjectId,
+  usersArray: Array<{ _id: Types.ObjectId } | Types.ObjectId>
 ) => {
   return usersArray.some((item) => {
     if ('_id' in item) {
@@ -68,3 +68,7 @@ export const objectIdInArrayOfAnotherObjectId = (
     return objectIdIsEquals(userId, item);
   });
 };
+
+export function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}

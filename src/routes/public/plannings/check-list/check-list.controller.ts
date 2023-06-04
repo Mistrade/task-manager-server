@@ -1,15 +1,15 @@
-import { AuthRequest } from '../types';
-import { ApiResponse } from '../../../types';
+import { Types } from 'mongoose';
 import {
   CatchErrorHandler,
   CatchResponse,
   ResponseException,
   SuccessResponse,
 } from '../../../../exceptions/response.exception';
-import { CheckListUpdateRequestData, ICreateCheckListProps } from './types';
-import { CheckListHelper } from './check-list.helper';
-import { Schema } from 'mongoose';
 import { ICheckListSchema } from '../../../../mongo/models/check-list.model';
+import { ApiResponse } from '../../../types';
+import { AuthRequest } from '../types';
+import { CheckListHelper } from './check-list.helper';
+import { CheckListUpdateRequestData, ICreateCheckListProps } from './types';
 
 export const createCheckListHandler = async (
   req: AuthRequest<ICreateCheckListProps>,
@@ -61,7 +61,7 @@ export const checkListUpdateHandler = async (
 };
 
 export const getCheckListByEventIdHandler = async (
-  request: AuthRequest<null, { eventId: Schema.Types.ObjectId }>,
+  request: AuthRequest<null, { eventId: Types.ObjectId }>,
   response: ApiResponse<ICheckListSchema | null>
 ) => {
   try {

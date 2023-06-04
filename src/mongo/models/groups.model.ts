@@ -1,19 +1,16 @@
-import { model, Schema } from 'mongoose';
-import autopopulate from 'mongoose-autopopulate';
-import { UserModelType } from './user.model';
 import dayjs from 'dayjs';
+import { model, Schema, Types } from 'mongoose';
+import autopopulate from 'mongoose-autopopulate';
 import { UserModelResponse } from '../../routes/public/session/types';
+import { UserModelType } from './user.model';
 
 export type GroupUniqueTypes = 'Invite' | 'Main';
 export type GroupItemType = 'Custom' | GroupUniqueTypes;
 
 export interface GroupsModelType<
-  T extends
-    | UserModelType
-    | UserModelResponse
-    | Schema.Types.ObjectId = UserModelType
+  T extends UserModelType | UserModelResponse | Types.ObjectId = UserModelType
 > {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   userId: T;
   created: Date;
   isSelected: boolean;

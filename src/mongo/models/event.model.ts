@@ -1,10 +1,10 @@
-import { model, Schema } from 'mongoose';
-import { UserModelType } from './user.model';
+import { model, Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
-import { GroupsModelType } from './groups.model';
-import { UserModelHelper } from '../helpers/user.helper';
 import { DbTaskPriorities, DbTaskStatuses } from '../../common/constants';
+import { UserModelHelper } from '../helpers/user.helper';
 import { EventInviteQueryType } from './event-invite.model';
+import { GroupsModelType } from './groups.model';
+import { UserModelType } from './user.model';
 
 export type PriorityKeys = 'veryLow' | 'low' | 'medium' | 'high' | 'veryHigh';
 
@@ -22,45 +22,50 @@ export interface EventLinkItem {
   value: string;
 }
 
-export interface DbEventChildOfItemSchemaType<T = Schema.Types.ObjectId> {
-  event: T;
-  _id: Schema.Types.ObjectId;
-  createdAt: Date;
-}
-
 export interface ICheckListItem {
   title: string;
   state: boolean;
-  eventLink: Schema.Types.ObjectId | null;
-  _id: Schema.Types.ObjectId;
+  eventLink: Types.ObjectId | null;
+  _id: Types.ObjectId;
 }
 
-export type TCheckListItemWithoutId = Omit<ICheckListItem, '_id'>;
+export enum EVENT_WIDGET_MODEL_MAP {
+  'FINANCE' = 'FinanceOperation',
+}
+
+// export interface IDbEventWidget {
+//   title: string,
+//   message?: string,
+//   modelId: Types.ObjectId,
+//   model: EVENT_WIDGET_MODEL_MAP,
+//
+// }
 
 export interface DbEventModel {
-  _id: Schema.Types.ObjectId;
+  _id: Types.ObjectId;
   description: string;
   link: EventLinkItem | null;
-  linkedFrom?: Schema.Types.ObjectId;
-  parentId?: Schema.Types.ObjectId;
+  linkedFrom?: Types.ObjectId;
+  parentId?: Types.ObjectId;
   priority: PriorityKeys;
   status: TaskStatusesType;
   time: Date;
   timeEnd: Date;
   title: string;
   type: string;
-  userId: Schema.Types.ObjectId;
-  group: Schema.Types.ObjectId | null;
-  likedUsers: Array<Schema.Types.ObjectId>;
+  userId: Types.ObjectId;
+  group: Types.ObjectId | null;
+  likedUsers: Array<Types.ObjectId>;
   createdAt: Date;
   updatedAt: Date;
   invites: Array<EventModelInvitesObject>;
-  treeId: Schema.Types.ObjectId | null;
-  checkList: null | Schema.Types.ObjectId;
+  treeId: Types.ObjectId | null;
+  checkList: null | Types.ObjectId;
+  // widget: IDbEventWidget | null
 }
 
-export interface EventModelInvitesObject<InviteType = Schema.Types.ObjectId> {
-  userId: Schema.Types.ObjectId;
+export interface EventModelInvitesObject<InviteType = Types.ObjectId> {
+  userId: Types.ObjectId;
   inviteId: InviteType | null;
 }
 
