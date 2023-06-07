@@ -480,6 +480,7 @@ export class EventBuildHelper extends EventCheckingHelper {
         : invite?.inviteId?.acceptedStatus || 'not_accepted', //Статус принятия события приглашенным пользователем
       accessRights: isCreator ? 'owner' : invite?.inviteId?.accessRights, //Права доступа текущего юзера к событию,
       isDelayed: this.isDelayedEvent(event),
+      widget: event.widget,
     };
   }
 

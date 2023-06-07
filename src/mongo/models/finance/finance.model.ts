@@ -1,13 +1,17 @@
 import { HydratedDocument, model, Model, Schema, Types } from 'mongoose';
+import { utcDate } from '../../../common/common';
 import { ResponseException } from '../../../exceptions/response.exception';
 import { DB_MODEL_NAMES } from '../../helpers/enums';
+import { sumProfit, sumProfitPercent } from '../../helpers/finance.utils';
 import {
   FinanceAnalyticSchema,
   IFinanceAnalyticSchema,
+  IPopulatedFinanceAnalytic,
 } from './finance-analytic.schema';
 import {
   FINANCE_OPERATION_TYPES,
   FinanceOperation,
+  IFinanceOperation,
   TFinanceOperationDifference,
 } from './operation.model';
 
@@ -21,9 +25,15 @@ export interface IFinance {
   model: Types.ObjectId;
   modelPath: FINANCE_MODEL_PATHS;
   analytic: IFinanceAnalyticSchema;
+  lastForceRefresh: Date;
   createdAt: Date;
   updatedAt: Date;
   user: Types.ObjectId;
+}
+
+export interface IFinanceWithPopulatedBestFields
+  extends Omit<IFinance, 'analytic'> {
+  analytic: IPopulatedFinanceAnalytic;
 }
 
 interface IUpdateFinanceModelAnalyticByDifference {
@@ -40,7 +50,7 @@ type PreModel = Model<IFinance, object, IFinanceMethods>;
 interface IFinanceStatics {
   updateAnalyticByOperationDifference(
     data: IUpdateFinanceModelAnalyticByDifference
-  ): Promise<HydratedDocument<IFinance> | null>;
+  ): Promise<HydratedDocument<IFinanceWithPopulatedBestFields> | null>;
 
   findByEventId(
     eventId: Types.ObjectId
@@ -104,6 +114,10 @@ const schema = new Schema<
       minlength: [1, 'Название фин. модели должно быть длиннее 1 символа'],
       required: [true, 'Название фин. модели обязательно для заполнения'],
     },
+    lastForceRefresh: {
+      type: Date,
+      default: () => utcDate(new Date()),
+    },
   },
   {
     timestamps: true,
@@ -118,16 +132,26 @@ const schema = new Schema<
       },
       async updateAnalyticByOperationDifference(
         data: IUpdateFinanceModelAnalyticByDifference
-      ): Promise<HydratedDocument<IFinance> | null> {
+      ): Promise<HydratedDocument<IFinanceWithPopulatedBestFields> | null> {
         const {
-          difference: { operationType, resultDifference, operationsCount },
+          difference: {
+            prevOperationType,
+            operationType,
+            resultDifference,
+            operationsCount,
+            prevConsumption,
+            prevIncome,
+            item,
+            action,
+          },
         } = data;
 
         if (resultDifference === 0) {
           return null;
         }
 
-        const model: HydratedDocument<IFinance> | null = await Finance.findById(
+        // const model: HydratedDocument<IFinanceWithPopulatedBestFields> | null =
+        let model: HydratedDocument<IFinance> | null = await Finance.findById(
           data.modelId
         );
 
@@ -145,9 +169,58 @@ const schema = new Schema<
           case FINANCE_OPERATION_TYPES.CONSUMPTION:
             model.analytic.consumption += resultDifference;
 
+            //Удаление или добавление
             if (operationsCount !== 0) {
               model.analytic.operationsCount += operationsCount;
               model.analytic.consumptionOperationCount += operationsCount;
+            }
+            //Изменение типа операции
+            else if (prevOperationType === FINANCE_OPERATION_TYPES.INCOME) {
+              model.analytic.income -= prevIncome;
+              model.analytic.incomesOperationCount--;
+              model.analytic.consumptionOperationCount++;
+            }
+
+            //Если тип операции создание или обновление мне нужно выполнить логику проверки топовой операции
+            if ((action === 'create' || action === 'update') && item) {
+              try {
+                //Если топовой операции расхода ранее не было, то устанавливаю текущую
+                if (!model.analytic.bestConsumptionOperation) {
+                  model.analytic.bestConsumptionOperation = item._id;
+                }
+                //Иначе нужно будет найти предыдущую в базе и сравнить с текущей
+                else {
+                  //Ищу в базе
+                  const bestConsumption: HydratedDocument<IFinanceOperation> | null =
+                    await FinanceOperation.findById(
+                      model.analytic.bestConsumptionOperation
+                    );
+
+                  //Если не найдено или у предыдущей результат меньше, чем у текущей, то устанавливаю текущую
+                  //В противных случаях - ничего не делаю
+                  if (
+                    !bestConsumption ||
+                    Math.abs(bestConsumption.result) < Math.abs(item.result)
+                  ) {
+                    model.analytic.bestConsumptionOperation = item._id;
+                  }
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+            //Здесь обработка сценария на удаление финансовой операции
+            else {
+              try {
+                const res: IFinanceOperation | null =
+                  await FinanceOperation.fetchAndFilterBestOperation(
+                    model._id,
+                    operationType
+                  );
+                model.analytic.bestConsumptionOperation = res?._id || null;
+              } catch (e) {
+                console.error(e);
+              }
             }
 
             break;
@@ -157,6 +230,54 @@ const schema = new Schema<
             if (operationsCount !== 0) {
               model.analytic.operationsCount += operationsCount;
               model.analytic.incomesOperationCount += operationsCount;
+            } else if (
+              prevOperationType === FINANCE_OPERATION_TYPES.CONSUMPTION
+            ) {
+              model.analytic.consumption -= prevConsumption;
+              model.analytic.incomesOperationCount++;
+              model.analytic.consumptionOperationCount--;
+            }
+
+            //Если тип операции создание или обновление мне нужно выполнить логику проверки топовой операции
+            if ((action === 'create' || action === 'update') && item) {
+              try {
+                //Если топовой операции расхода ранее не было, то устанавливаю текущую
+                if (!model.analytic.bestIncomeOperation) {
+                  model.analytic.bestIncomeOperation = item._id;
+                }
+                //Иначе нужно будет найти предыдущую в базе и сравнить с текущей
+                else {
+                  //Ищу в базе
+                  const bestIncome: HydratedDocument<IFinanceOperation> | null =
+                    await FinanceOperation.findById(
+                      model.analytic.bestIncomeOperation
+                    );
+
+                  //Если не найдено или у предыдущей результат меньше, чем у текущей, то устанавливаю текущую
+                  //В противных случаях - ничего не делаю
+                  if (
+                    !bestIncome ||
+                    Math.abs(bestIncome.result) < Math.abs(item.result)
+                  ) {
+                    model.analytic.bestIncomeOperation = item._id;
+                  }
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+            //Здесь обработка сценария на удаление финансовой операции
+            else {
+              try {
+                const res: IFinanceOperation | null =
+                  await FinanceOperation.fetchAndFilterBestOperation(
+                    model._id,
+                    operationType
+                  );
+                model.analytic.bestIncomeOperation = res?._id || null;
+              } catch (e) {
+                console.error(e);
+              }
             }
 
             break;
@@ -164,10 +285,14 @@ const schema = new Schema<
             return null;
         }
 
-        model.analytic.profit =
-          model.analytic.income - model.analytic.consumption;
-        model.analytic.profitPercent =
-          (model.analytic.profit / (model.analytic.income || 1)) * 100;
+        model.analytic.profit = sumProfit({
+          income: model.analytic.income,
+          consumption: model.analytic.consumption,
+        });
+        model.analytic.profitPercent = sumProfitPercent({
+          profit: model.analytic.profit,
+          income: model.analytic.income,
+        });
 
         await model.save(
           {
@@ -183,7 +308,19 @@ const schema = new Schema<
           }
         );
 
-        return model;
+        const populatedFields: Array<keyof IFinanceAnalyticSchema> = [
+          'bestIncomeOperation',
+          'bestConsumptionOperation',
+        ];
+        const populatePath: keyof IFinance = 'analytic';
+
+        const result: HydratedDocument<IFinanceWithPopulatedBestFields> =
+          await model.populate({
+            path: populatePath,
+            populate: populatedFields,
+          });
+
+        return result;
       },
       async createFinanceModel(
         sourceModelId: Types.ObjectId,

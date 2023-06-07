@@ -1,11 +1,16 @@
-import { DefaultEventItemResponse, InfoHandlerObject } from './types';
 import {
   CatchErrorHandler,
   ResponseException,
 } from '../../../../exceptions/response.exception';
+import { EventWidget } from '../../../../mongo/models/event-widget.model';
 import { EventHelper } from '../events/helpers/event.helper';
-import { EventUpdateHelper } from './helpers/event-update.helper';
 import { updateEventResultMessagesMap } from './helpers/constants';
+import { EventUpdateHelper } from './helpers/event-update.helper';
+import {
+  DefaultEventItemResponse,
+  IGetEventInfoByEventIdResponse,
+  InfoHandlerObject,
+} from './types';
 
 export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
   async (req, res) => {
@@ -19,8 +24,6 @@ export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
         { _id: eventId },
         'viewer'
       );
-
-      console.log(JSON.stringify(event));
 
       const resultEvent: DefaultEventItemResponse = await eventHelper
         .resolveEventsGroupAndBuild([event], 'viewer', 'Invite', 'default')
@@ -36,11 +39,26 @@ export const getEventInfoByEventId: InfoHandlerObject['getEventInfoByEventId'] =
         );
       }
 
-      const result = new ResponseException(
-        ResponseException.createSuccessObject(resultEvent)
+      const returned: IGetEventInfoByEventIdResponse = {
+        base: resultEvent,
+        widget: null,
+      };
+
+      try {
+        returned.widget = await EventWidget.findByEventId(resultEvent._id);
+      } catch (e) {
+        console.error(
+          'Не удалось загрузить виджет по событию: ',
+          resultEvent._id
+        );
+        console.error(e);
+      }
+
+      const { status, json } = new ResponseException(
+        ResponseException.createSuccessObject(returned)
       );
 
-      return res.status(result.status).json(result.json);
+      return res.status(status).json(json);
     } catch (e) {
       console.error('error in get event info by event Id', e);
       const { status, json } = CatchErrorHandler(e);

@@ -9,7 +9,7 @@ import {
 import { ResponseException } from '../../../exceptions/response.exception';
 import { DB_MODEL_NAMES } from '../../helpers/enums';
 import { TUserOmitPassword } from '../user.model';
-import { Finance, IFinance } from './finance.model';
+import { Finance, IFinanceWithPopulatedBestFields } from './finance.model';
 
 export enum FINANCE_OPERATION_TYPES {
   'INCOME' = 'income',
@@ -47,17 +47,20 @@ export interface IFinanceOperation {
 
 export type TFinanceOperationDifference = Pick<
   IFinanceOperation,
-  'value' | 'count' | 'operationType'
+  'operationType'
 > & {
-  prevValue: number;
-  prevCount: number;
+  action: 'create' | 'update' | 'remove';
   resultDifference: number;
   operationsCount: number;
+  prevOperationType: FINANCE_OPERATION_TYPES;
+  prevIncome: number;
+  prevConsumption: number;
+  item: IFinanceOperation | null;
 };
 
 export interface IUpdateOperationValueResult {
   operation: HydratedDocument<IFinanceOperation>;
-  financeModel?: HydratedDocument<IFinance> | null;
+  financeModel?: HydratedDocument<IFinanceWithPopulatedBestFields> | null;
 }
 
 interface IFinanceOperationMethods {
@@ -68,7 +71,7 @@ type PreModel = Model<IFinanceOperation, object, IFinanceOperationMethods>;
 
 export type TUpdateOperationObject = Pick<
   IFinanceOperation,
-  'value' | 'count' | 'date' | 'name' | 'description'
+  'value' | 'count' | 'date' | 'name' | 'description' | 'operationType'
 >;
 
 export interface ISetFinanceOperationStateProps {
@@ -96,18 +99,35 @@ interface IFinanceOperationStatics {
     data: IInitialFinanceOperation
   ): Promise<IUpdateOperationValueResult>;
 
-  removeOperation(_id: Types.ObjectId): Promise<IFinance | null>;
+  removeOperation(
+    _id: Types.ObjectId
+  ): Promise<IFinanceWithPopulatedBestFields | null>;
 
   removeByModelId(_id: Types.ObjectId): Promise<void>;
 
   setStateById(
     props: ISetFinanceOperationStateProps
   ): Promise<HydratedDocument<IFinanceOperation> | null>;
+
+  fetchAndFilterBestOperation(
+    this: FinanceOperationModel,
+    modelId: Types.ObjectId,
+    operationType: FINANCE_OPERATION_TYPES
+  ): Promise<HydratedDocument<IFinanceOperation> | null>;
 }
 
 export type FinanceOperationModel = PreModel & IFinanceOperationStatics;
 
-export const schema = new Schema<
+export type SchemaType = Schema<
+  IFinanceOperation,
+  FinanceOperationModel,
+  IFinanceOperationMethods,
+  object,
+  object,
+  IFinanceOperationStatics
+>;
+
+export const schema: SchemaType = new Schema<
   IFinanceOperation,
   FinanceOperationModel,
   IFinanceOperationMethods,
@@ -179,6 +199,33 @@ export const schema = new Schema<
   {
     timestamps: true,
     statics: {
+      async fetchAndFilterBestOperation(
+        this: FinanceOperationModel,
+        modelId: Types.ObjectId,
+        operationType: FINANCE_OPERATION_TYPES
+      ): Promise<HydratedDocument<IFinanceOperation> | null> {
+        const arr: Array<HydratedDocument<IFinanceOperation>> = await this.find(
+          { model: modelId, operationType }
+        );
+
+        if (!arr || arr.length === 0) {
+          return null;
+        }
+
+        let max: HydratedDocument<IFinanceOperation> | null = null;
+
+        arr.forEach((item) => {
+          if (max) {
+            if (max.result < item.result) {
+              max = item;
+            }
+          } else {
+            max = item;
+          }
+        });
+
+        return max;
+      },
       async setStateById({
         _id,
         state,
@@ -283,22 +330,58 @@ export const schema = new Schema<
           return 0;
         };
 
-        const difference: TFinanceOperationDifference = {
-          value: data.value !== undefined ? data.value - operation.value : 0,
-          count: data.count !== undefined ? data.count - operation.count : 0,
-          operationType: operation.operationType,
-          prevCount: operation.count,
-          prevValue: operation.value,
-          resultDifference: checkResultDiff(),
-          operationsCount: 0,
-        };
+        let difference: TFinanceOperationDifference;
+
+        if (data.operationType !== operation.operationType) {
+          if (data.operationType === FINANCE_OPERATION_TYPES.INCOME) {
+            difference = {
+              action: 'update',
+              operationType: FINANCE_OPERATION_TYPES.INCOME,
+              prevOperationType: FINANCE_OPERATION_TYPES.CONSUMPTION,
+              resultDifference: Math.abs(data.value * data.count),
+              operationsCount: 0,
+              prevIncome: 0,
+              prevConsumption: operation.result,
+              item: null,
+            };
+          } else {
+            difference = {
+              action: 'update',
+              operationType: FINANCE_OPERATION_TYPES.CONSUMPTION,
+              prevOperationType: FINANCE_OPERATION_TYPES.INCOME,
+              resultDifference: Math.abs(data.value * data.count),
+              operationsCount: 0,
+              prevIncome: operation.result,
+              prevConsumption: 0,
+              item: null,
+            };
+          }
+        } else {
+          difference = {
+            action: 'update',
+            prevOperationType: operation.operationType,
+            operationType: data.operationType,
+            resultDifference: checkResultDiff(),
+            operationsCount: 0,
+            prevIncome:
+              operation.operationType === FINANCE_OPERATION_TYPES.INCOME
+                ? operation.result
+                : 0,
+            prevConsumption:
+              operation.operationType === FINANCE_OPERATION_TYPES.CONSUMPTION
+                ? operation.result
+                : 0,
+            item: null,
+          };
+        }
 
         operation.value = data.value;
         operation.count = data.count;
         operation.name = data.name;
         operation.date = data.date;
-        operation.result = operation.count * operation.value;
+        operation.result = Math.abs(operation.count * operation.value);
         operation.description = data.description;
+        operation.operationType = data.operationType;
 
         await operation.save(
           {
@@ -319,6 +402,8 @@ export const schema = new Schema<
           }
         );
 
+        difference.item = operation;
+
         if (difference.resultDifference === 0) {
           return {
             operation,
@@ -326,7 +411,7 @@ export const schema = new Schema<
         }
 
         try {
-          const financeModel: HydratedDocument<IFinance> | null =
+          const financeModel: HydratedDocument<IFinanceWithPopulatedBestFields> | null =
             await Finance.updateAnalyticByOperationDifference({
               modelId: operation.model._id,
               difference,
@@ -353,24 +438,25 @@ export const schema = new Schema<
       async createOperation(
         data: IInitialFinanceOperation
       ): Promise<IUpdateOperationValueResult> {
-        const difference: TFinanceOperationDifference = {
-          value: data.value,
-          count: data.count,
-          operationType: data.operationType,
-          prevCount: 0,
-          prevValue: 0,
-          operationsCount: 1,
-          resultDifference: data.value * data.count,
-        };
-
         const operation: HydratedDocument<IFinanceOperation> =
           await FinanceOperation.create({
             ...data,
-            result: difference.resultDifference,
+            result: Math.abs(data.count) * Math.abs(data.value),
           });
 
         try {
-          const financeModel: HydratedDocument<IFinance> | null =
+          const difference: TFinanceOperationDifference = {
+            action: 'create',
+            prevOperationType: data.operationType,
+            operationType: data.operationType,
+            operationsCount: 1,
+            resultDifference: data.value * data.count,
+            prevConsumption: 0,
+            prevIncome: 0,
+            item: operation,
+          };
+
+          const financeModel: HydratedDocument<IFinanceWithPopulatedBestFields> | null =
             await Finance.updateAnalyticByOperationDifference({
               difference,
               modelId: operation.model._id,
@@ -392,7 +478,9 @@ export const schema = new Schema<
         }
       },
 
-      async removeOperation(_id: Types.ObjectId): Promise<IFinance | null> {
+      async removeOperation(
+        _id: Types.ObjectId
+      ): Promise<IFinanceWithPopulatedBestFields | null> {
         const operation: HydratedDocument<IFinanceOperation> | null =
           await FinanceOperation.findOneAndDelete({
             _id,
@@ -410,17 +498,24 @@ export const schema = new Schema<
         }
 
         const diff: TFinanceOperationDifference = {
-          value: -1 * operation.value,
-          count: -1 * operation.count,
+          action: 'remove',
           operationType: operation.operationType,
-          prevValue: operation.value,
-          prevCount: operation.count,
           resultDifference: -1 * operation.value * operation.count,
           operationsCount: -1,
+          prevOperationType: operation.operationType,
+          prevConsumption:
+            operation.operationType === FINANCE_OPERATION_TYPES.CONSUMPTION
+              ? operation.result
+              : 0,
+          prevIncome:
+            operation.operationType === FINANCE_OPERATION_TYPES.INCOME
+              ? operation.result
+              : 0,
+          item: null,
         };
 
         try {
-          const financeModel =
+          const financeModel: HydratedDocument<IFinanceWithPopulatedBestFields> | null =
             await Finance.updateAnalyticByOperationDifference({
               modelId: operation.model,
               difference: diff,

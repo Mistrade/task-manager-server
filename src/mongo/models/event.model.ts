@@ -1,8 +1,13 @@
 import { model, Schema, Types } from 'mongoose';
 import autopopulate from 'mongoose-autopopulate';
-import { DbTaskPriorities, DbTaskStatuses } from '../../common/constants';
+import {
+  DB_MODEL_NAMES,
+  EVENT_PRIORITY,
+  EVENT_STATUSES,
+} from '../helpers/enums';
 import { UserModelHelper } from '../helpers/user.helper';
 import { EventInviteQueryType } from './event-invite.model';
+import { IPopulatedEventWidget } from './event-widget.model';
 import { GroupsModelType } from './groups.model';
 import { UserModelType } from './user.model';
 
@@ -29,18 +34,6 @@ export interface ICheckListItem {
   _id: Types.ObjectId;
 }
 
-export enum EVENT_WIDGET_MODEL_MAP {
-  'FINANCE' = 'FinanceOperation',
-}
-
-// export interface IDbEventWidget {
-//   title: string,
-//   message?: string,
-//   modelId: Types.ObjectId,
-//   model: EVENT_WIDGET_MODEL_MAP,
-//
-// }
-
 export interface DbEventModel {
   _id: Types.ObjectId;
   description: string;
@@ -61,7 +54,7 @@ export interface DbEventModel {
   invites: Array<EventModelInvitesObject>;
   treeId: Types.ObjectId | null;
   checkList: null | Types.ObjectId;
-  // widget: IDbEventWidget | null
+  widget: Types.ObjectId | null;
 }
 
 export interface EventModelInvitesObject<InviteType = Types.ObjectId> {
@@ -70,7 +63,7 @@ export interface EventModelInvitesObject<InviteType = Types.ObjectId> {
 }
 
 export interface EventModelType
-  extends Omit<DbEventModel, 'userId' | 'group' | 'invites'> {
+  extends Omit<DbEventModel, 'userId' | 'group' | 'invites' | 'widget'> {
   userId: UserModelType;
   group: GroupsModelType | null;
   invites: Array<
@@ -78,6 +71,7 @@ export interface EventModelType
       Omit<EventInviteQueryType, 'event' | 'createdAt' | 'updatedAt'>
     >
   >;
+  widget: IPopulatedEventWidget | null;
 }
 
 export interface EventModelWithPopulatedChains
@@ -95,7 +89,7 @@ export const EventSchema = new Schema(
   {
     checkList: {
       type: Schema.Types.ObjectId,
-      ref: 'CheckList',
+      ref: DB_MODEL_NAMES.checkList,
       default: null,
     },
     title: { type: String, required: true }, //+
@@ -104,32 +98,32 @@ export const EventSchema = new Schema(
     link: { type: LinkSchema, required: false, default: null }, //+
     linkedFrom: {
       type: Schema.Types.ObjectId || undefined,
-      ref: 'Event',
+      ref: DB_MODEL_NAMES.eventModel,
       default: null,
     }, //+
     parentId: {
       type: Schema.Types.ObjectId || undefined,
-      ref: 'Event',
+      ref: DB_MODEL_NAMES.eventModel,
       default: null,
     }, //+
     priority: {
       type: String,
       required: true,
-      default: 'medium' as PriorityKeys,
-      of: DbTaskPriorities,
+      default: EVENT_PRIORITY.MEDIUM,
+      enum: Object.values(EVENT_PRIORITY),
     },
     status: {
       type: String,
       required: true,
-      default: 'created' as TaskStatusesType,
-      of: DbTaskStatuses,
+      default: EVENT_STATUSES.CREATED,
+      enum: Object.values(EVENT_STATUSES),
     },
     time: { type: Date, required: true },
     timeEnd: { type: Date, required: true },
     type: { type: String, required: true },
     userId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: DB_MODEL_NAMES.user,
       autopopulate: {
         select: [
           'name',
@@ -152,12 +146,13 @@ export const EventSchema = new Schema(
             userId: {
               type: Schema.Types.ObjectId,
               required: true,
-              ref: 'User',
+              ref: DB_MODEL_NAMES.user,
             },
             inviteId: {
               type: Schema.Types.ObjectId,
               required: true,
-              ref: 'EventInvite',
+              ref: DB_MODEL_NAMES.eventInvite,
+              //TODO убрать autopopulate так как это создает доп. нагрузку на запрос большого количества событий, а фактически не используется!!!
               autopopulate: true,
             },
           },
@@ -167,12 +162,18 @@ export const EventSchema = new Schema(
     },
     group: {
       type: Schema.Types.ObjectId,
-      ref: 'Group',
+      ref: DB_MODEL_NAMES.eventGroup,
       required: true,
       autopopulate: true,
     },
     likedUsers: {
-      type: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: DB_MODEL_NAMES.user,
+          required: true,
+        },
+      ],
       default: [],
     },
   },
@@ -181,4 +182,7 @@ export const EventSchema = new Schema(
 
 EventSchema.plugin(autopopulate);
 
-export const EventModel = model<EventModelType>('Event', EventSchema);
+export const EventModel = model<EventModelType>(
+  DB_MODEL_NAMES.eventModel,
+  EventSchema
+);

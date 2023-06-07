@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { EventInviteAccessRights } from '../../../../mongo/models/event-invite.model';
+import { IEventWidgetModelBase } from '../../../../mongo/models/event-widget.model';
 import {
   CalendarPriorityKeys,
   EventLinkItem,
@@ -34,6 +35,7 @@ export interface EventHandler_Create_RequestData {
     title: string;
     data: Array<ICheckListItem>;
   };
+  widget?: IEventWidgetModelBase;
 }
 
 export interface EventHandlerObject {

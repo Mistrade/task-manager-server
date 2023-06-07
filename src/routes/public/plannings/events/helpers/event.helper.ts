@@ -12,10 +12,16 @@ import {
   EventInviteQueryType,
 } from '../../../../../mongo/models/event-invite.model';
 import {
+  EVENT_WIDGET_MODEL_MAP,
+  EventWidget,
+  IEventWidget,
+} from '../../../../../mongo/models/event-widget.model';
+import {
   EventModel,
   EventModelInvitesObject,
   EventModelType,
 } from '../../../../../mongo/models/event.model';
+import { FinanceOperation } from '../../../../../mongo/models/finance/operation.model';
 import {
   UserModel,
   UserModelType,
@@ -155,6 +161,7 @@ export class EventHelper extends EventBuildHelper {
       description,
       checkList,
       attachCheckList,
+      widget,
     } = data;
     let { members } = data;
     //Создаю экземпляр помощника в работе с группами
@@ -179,6 +186,10 @@ export class EventHelper extends EventBuildHelper {
     //По умолчанию - null, так как пользователи могут быть не найдены.
     //Используется для формирования EventInvite и записи в историю о приглашении новых пользователей
     let inviteUsers: Array<HydratedDocument<UserModelType>> | null = null;
+
+    //Создаю переменную, в которой буду хранить информацию о созданном по событию виджету
+    //По умолчанию - null, так как виджета может и не быть.
+    let widgetData: IEventWidget | null = null;
 
     //Создаю массив, который в последующем будет записан в историю
     //По умолчанию - пустой массив
@@ -464,6 +475,37 @@ export class EventHelper extends EventBuildHelper {
 
     //Записываю сформированный массив в БД истории
     await historyApi.addToHistory(toHistoryArray);
+
+    if (widget) {
+      try {
+        const newWidget = await EventWidget.create({
+          eventId: createdEvent._id,
+          title: widget.title,
+          message: widget.message,
+          model: widget.model,
+          modelName: widget.modelName,
+          fromEvent: widget.fromEvent,
+        });
+
+        await EventModel.updateOne(
+          { _id: createdEvent._id },
+          { widget: newWidget._id }
+        );
+
+        if (newWidget.modelName === EVENT_WIDGET_MODEL_MAP.FINANCE) {
+          await FinanceOperation.updateOne(
+            { _id: newWidget.model },
+            {
+              $push: {
+                events: createdEvent._id,
+              },
+            }
+          );
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
     //Если запись истории прошла успешно - возвращаю только что созданное событие из базы (получил его во время создания)
     return createdEvent;

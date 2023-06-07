@@ -4,8 +4,12 @@ import { FinanceApiController } from './controller';
 const router = express.Router();
 
 router.post('/model', FinanceApiController.createFinanceModel); //Создание фин.модели +
+router.get('/model/:modelId', FinanceApiController.getFinanceModelById); //Пересчитать данные аналитики по фин.модели
 router.delete('/model/:modelId', FinanceApiController.removeFinanceModel); //Удалить фин.модель
-router.get('/models/:sourceModel/:_id', FinanceApiController.getFinanceModel); //Получить фин.модели +
+router.get(
+  '/models/:sourceModel/:_id',
+  FinanceApiController.getFinanceModelsBySourceModelId
+); //Получить фин.модели +
 
 router.post('/operation', FinanceApiController.createOperation); //Создание операции +
 router.patch('/operation', FinanceApiController.updateOperation); //Обновление созданной операции +

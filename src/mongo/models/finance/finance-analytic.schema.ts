@@ -1,16 +1,36 @@
 import { Schema, Types } from 'mongoose';
+import { IFinanceOperation } from './operation.model';
 
 export interface IFinanceAnalyticSchema {
-  income: number; //доход
-  consumption: number; //расход
-  operationsCount: number; //Кол-во операций
-  incomesOperationCount: number; //Кол-во доходных операций
-  consumptionOperationCount: number; //Кол-во расходных операций
-  bestIncomeOperation: Types.ObjectId | null; //Наиболее доходная операция
-  bestConsumptionOperation: Types.ObjectId | null; //Наиболее расходная операция
-  profit: number; //virtual - профит
-  profitPercent: number; //virtual - профит в процентах
-  updatedAt: Date; //Дата последнего обновления
+  //доход
+  income: number;
+  //расход
+  consumption: number;
+  //Кол-во операций
+  operationsCount: number;
+  //Кол-во доходных операций
+  incomesOperationCount: number;
+  //Кол-во расходных операций
+  consumptionOperationCount: number;
+  //Наиболее доходная операция
+  bestIncomeOperation: Types.ObjectId | null;
+  //Наиболее расходная операция
+  bestConsumptionOperation: Types.ObjectId | null;
+  //virtual - профит
+  profit: number;
+  //virtual - профит в процентах
+  profitPercent: number;
+  //Дата последнего обновления
+  updatedAt: Date;
+}
+
+export interface IPopulatedFinanceAnalytic
+  extends Omit<
+    IFinanceAnalyticSchema,
+    'bestConsumptionOperation' | 'bestIncomeOperation'
+  > {
+  bestIncomeOperation: IFinanceOperation | null;
+  bestConsumptionOperation: IFinanceOperation | null;
 }
 
 export const FinanceAnalyticSchema = new Schema<IFinanceAnalyticSchema>(

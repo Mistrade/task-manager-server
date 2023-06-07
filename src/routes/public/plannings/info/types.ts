@@ -5,6 +5,7 @@ import {
   AccessRightsWithOwner,
   EventInviteAcceptedStatuses,
 } from '../../../../mongo/models/event-invite.model';
+import { IEventWidget } from '../../../../mongo/models/event-widget.model';
 import {
   CalendarPriorityKeys,
   EventLinkItem,
@@ -188,11 +189,16 @@ export type UpdateEventMapTypes =
   | UpdateEventGroup
   | UpdateEventIsLiked;
 
+export interface IGetEventInfoByEventIdResponse {
+  base: DefaultEventItemResponse | null;
+  widget: IEventWidget | null;
+}
+
 export interface InfoHandlerObject {
   getEventInfoByEventId(
     request: AuthRequest<null, ByEventIdType>,
-    response: ApiResponse<DefaultEventItemResponse | null>
-  ): Promise<ApiResponse<ReturnEventTypeAfterBuild<'default'> | null>>;
+    response: ApiResponse<IGetEventInfoByEventIdResponse>
+  ): Promise<ApiResponse<IGetEventInfoByEventIdResponse>>;
 
   getShortEventsArray(
     request: AuthRequest<RequestEventFilters>,
