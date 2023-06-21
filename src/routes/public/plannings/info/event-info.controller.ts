@@ -100,7 +100,8 @@ export const getEventsStorage: InfoHandlerObject['getEventsAtScope'] = async (
 
     const eventsStorage = finder.buildEventsStorage(
       eventsList,
-      body.utcOffset || 0
+      body.utcOffset || 0,
+      { fromDate: body.fromDate, toDate: body.toDate }
     );
 
     const { status, json } = new ResponseException(

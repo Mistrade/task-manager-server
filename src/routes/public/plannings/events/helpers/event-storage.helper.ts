@@ -1,3 +1,5 @@
+import dayjs, { Dayjs } from 'dayjs';
+import { TaskFilteredStatusesObject } from '../../../../../common/constants';
 import {
   EventBuildTypes,
   EventCounterOfStatus,
@@ -8,8 +10,6 @@ import {
   EventsStorageYear,
   ReturnEventTypeAfterBuild,
 } from '../../info/types';
-import dayjs, { Dayjs } from 'dayjs';
-import { TaskFilteredStatusesObject } from '../../../../../common/constants';
 import { FilterTaskStatuses } from '../../types';
 
 /** @class EventStorageHelper
@@ -77,7 +77,8 @@ export class EventStorageHelper {
   private setEventsToEventsStorage<BuildType extends EventBuildTypes>(
     storage: EventsStorage<BuildType>,
     event: ReturnEventTypeAfterBuild<BuildType>,
-    utcOffset: number
+    utcOffset: number,
+    scope: { fromDate?: string; toDate?: string }
   ): EventsStorage<BuildType> {
     const start = this.utcOffsetDate(event.time, utcOffset);
     const end = this.utcOffsetDate(event.timeEnd, utcOffset);
@@ -93,7 +94,17 @@ export class EventStorageHelper {
       );
     } else {
       let i = start;
-      while (i.isSameOrBefore(end, 'day')) {
+      const { fromDate, toDate } = scope;
+
+      const from = dayjs(fromDate);
+      const to = dayjs(toDate);
+
+      while (
+        i.isSameOrBefore(end, 'day') &&
+        (from.isValid() && to.isValid()
+          ? dayjs(i).isBetween(from, to, 'day', '[]')
+          : true)
+      ) {
         storage = this.setEventAtEventsStorageDate(
           storage,
           i.toDate(),
@@ -108,7 +119,8 @@ export class EventStorageHelper {
 
   public buildEventsStorage<BuildType extends EventBuildTypes>(
     arr: Array<ReturnEventTypeAfterBuild<BuildType>>,
-    utcOffset: number
+    utcOffset: number,
+    scope: { fromDate?: string; toDate?: string }
   ): EventsStorage<BuildType> {
     let eventStorage: EventsStorage<BuildType> = {};
 
@@ -116,7 +128,8 @@ export class EventStorageHelper {
       eventStorage = this.setEventsToEventsStorage(
         eventStorage,
         event,
-        utcOffset
+        utcOffset,
+        scope
       );
     });
 

@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import utc from 'dayjs/plugin/utc';
@@ -10,6 +11,7 @@ import morgan from 'morgan';
 import { ApiRouter } from './routes/public/api.router';
 
 dayjs.extend(utc);
+dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
@@ -43,12 +45,12 @@ const start = async (times: number) => {
       {
         dbName: 'admin',
       },
-      (err) => {
+      async (err) => {
         if (err) {
           console.log('Connection error: ', err);
           throw err;
         }
-        console.log('Connected');
+
         app.listen(port, async () => {
           console.log(
             `server has been started without errors on port ${port} updated 909090856475364235465786`

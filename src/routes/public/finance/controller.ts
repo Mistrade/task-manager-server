@@ -9,6 +9,7 @@ import {
   sumProfit,
   sumProfitPercent,
 } from '../../../mongo/helpers/finance.utils';
+import { EventModel, EventModelType } from '../../../mongo/models/event.model';
 import {
   IFinanceAnalyticSchema,
   IPopulatedFinanceAnalytic,
@@ -29,10 +30,181 @@ import {
   TUpdateOperationObject,
 } from '../../../mongo/models/finance/operation.model';
 import { ApiResponse } from '../../types';
+import { EventHelper } from '../plannings/events/helpers/event.helper';
 import { AuthRequest } from '../plannings/types';
 import { SessionController } from '../session/session.controller';
+import { IGetTotalSampleProps } from './types';
 
 export abstract class FinanceApiController {
+  static async updateFinanceModel() {}
+
+  static async getTotalSample(
+    req: AuthRequest<IGetTotalSampleProps>,
+    res: ApiResponse<any>
+  ): Promise<ApiResponse<any>> {
+    try {
+      const {
+        body: { fromDate, toDate },
+        user,
+      } = req;
+
+      const startDate = dayjs(utcDate(fromDate));
+      const endDate = dayjs(utcDate(toDate));
+
+      if (!startDate.isValid()) {
+        throw new ResponseException(
+          ResponseException.createObject(
+            400,
+            'warning',
+            'Для получения финансовой аналитики за диапазон времени пришло невалидное значение начала диапазона',
+            null
+          )
+        );
+      }
+
+      if (!endDate.isValid()) {
+        throw new ResponseException(
+          ResponseException.createObject(
+            400,
+            'warning',
+            'Для получения финансовой аналитики за диапазон времени пришло невалидное значение конца диапазона',
+            null
+          )
+        );
+      }
+
+      const userInfo = new SessionController(user).checkUser();
+
+      const dateFilter = new EventHelper(userInfo).buildDateQuery(
+        fromDate,
+        toDate
+      );
+
+      const events: Array<HydratedDocument<EventModelType>> =
+        await EventModel.find({
+          ...dateFilter,
+          userId: userInfo._id,
+        });
+
+      const models: Array<HydratedDocument<IFinance>> = await Finance.find({
+        modelPath: FINANCE_MODEL_PATHS.EVENT,
+        model: { $in: events.map((item) => item._id) },
+      });
+
+      // const operations: Array<HydratedDocument<IFinanceOperation>> =
+      //   await FinanceOperation.find({
+      //     user: userInfo._id,
+      //     $and: [
+      //       { date: { $gte: utcDate(startDate) } },
+      //       { date: { $lte: utcDate(endDate) } },
+      //     ],
+      //     includeInTotalSample: true,
+      //   });
+
+      interface Result {
+        [key: string]: {
+          income: number;
+          consumption: number;
+          profit: number;
+        };
+      }
+
+      const result: Result = {};
+
+      models?.forEach((item) => {
+        const eventId = item.model.toString();
+        if (result[eventId]) {
+          const eventObject = result[eventId];
+          const income = eventObject.income + item.analytic.income;
+          const consumption =
+            eventObject.consumption + item.analytic.consumption;
+          const profit = sumProfit({ income, consumption });
+          result[eventId] = {
+            income,
+            consumption,
+            profit,
+          };
+        } else {
+          result[eventId] = {
+            income: item.analytic.income,
+            consumption: item.analytic.consumption,
+            profit: sumProfit({
+              income: item.analytic.income,
+              consumption: item.analytic.consumption,
+            }),
+          };
+        }
+      });
+
+      // operations.forEach((item) => {
+      //   const dateString = dayjs(item.date).format('DD-MM-YYYY');
+      //   const eventIdString = item.linkToEventId.toString();
+      //
+      //   console.log('eventIdString: ', eventIdString);
+      //
+      //   if (!result.byDate[dateString]) {
+      //     result.byDate[dateString] = {
+      //       income: 0,
+      //       consumption: 0,
+      //       profit: 0,
+      //     };
+      //   }
+      //
+      //   if (!result.byEvents[eventIdString]) {
+      //     result.byEvents[eventIdString] = {
+      //       income: 0,
+      //       consumption: 0,
+      //       profit: 0,
+      //     };
+      //   }
+      //
+      //   const dateObject: Result['total'] = result.byDate[dateString];
+      //   const eventObject: Result['total'] = result.byEvents[eventIdString];
+      //
+      //   if (item.operationType === FINANCE_OPERATION_TYPES.INCOME) {
+      //     result.total.income += item.result;
+      //
+      //     dateObject.income += item.result;
+      //     eventObject.income += item.result;
+      //     dateObject.profit = sumProfit({
+      //       income: dateObject.income,
+      //       consumption: dateObject.consumption,
+      //     });
+      //     eventObject.profit = sumProfit({
+      //       income: eventObject.income,
+      //       consumption: eventObject.consumption,
+      //     });
+      //   } else {
+      //     result.total.consumption += item.result;
+      //     dateObject.consumption += item.result;
+      //     eventObject.consumption += item.result;
+      //     dateObject.profit = sumProfit({
+      //       income: dateObject.income,
+      //       consumption: dateObject.consumption,
+      //     });
+      //     eventObject.profit = sumProfit({
+      //       income: eventObject.income,
+      //       consumption: eventObject.consumption,
+      //     });
+      //   }
+      // });
+      //
+      // result.total.profit = sumProfit({
+      //   income: result.total.income,
+      //   consumption: result.total.consumption,
+      // });
+
+      const { status, json } = new ResponseException(
+        ResponseException.createSuccessObject(result)
+      );
+
+      return res.status(status).json(json);
+    } catch (e) {
+      const { status, json } = CatchErrorHandler(e);
+      return res.status(status).json(json);
+    }
+  }
+
   static async getFinanceModelById(
     req: AuthRequest<null, { modelId: Types.ObjectId }>,
     res: ApiResponse<IFinanceWithPopulatedBestFields | null>

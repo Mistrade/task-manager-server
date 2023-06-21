@@ -7,6 +7,10 @@ export enum DB_MODEL_NAMES {
   'user' = 'User',
   'eventInvite' = 'EventInvite',
   'eventGroup' = 'Group',
+  'financeAccount' = 'FinanceAccount',
+  'financeTarget' = 'FinanceTarget',
+  'financeTemplate' = 'FinanceTemplate',
+  'financeCategory' = 'FinanceCategory',
 }
 
 export enum EVENT_PRIORITY {

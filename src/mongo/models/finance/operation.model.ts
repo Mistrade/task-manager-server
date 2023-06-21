@@ -9,7 +9,11 @@ import {
 import { ResponseException } from '../../../exceptions/response.exception';
 import { DB_MODEL_NAMES } from '../../helpers/enums';
 import { TUserOmitPassword } from '../user.model';
-import { Finance, IFinanceWithPopulatedBestFields } from './finance.model';
+import {
+  Finance,
+  IFinance,
+  IFinanceWithPopulatedBestFields,
+} from './finance.model';
 
 export enum FINANCE_OPERATION_TYPES {
   'INCOME' = 'income',
@@ -26,13 +30,15 @@ export interface IInitialFinanceOperation {
   user: Types.ObjectId;
   description?: string;
   eventId?: Types.ObjectId | null;
+  includeInTotalSample: boolean;
 }
 
 export interface IFinanceOperation {
+  linkToEventId: Types.ObjectId;
   _id: Types.ObjectId;
   model: Types.ObjectId;
   name: string;
-  date: Date | null;
+  date: Date;
   operationType: FINANCE_OPERATION_TYPES;
   value: number;
   count: number;
@@ -43,6 +49,11 @@ export interface IFinanceOperation {
   description?: string;
   events: Array<Types.ObjectId>;
   state: boolean;
+  includeInTotalSample: boolean;
+  financeAccount: Types.ObjectId;
+  financeTarget: Types.ObjectId | null;
+  fromTemplate: Types.ObjectId | null;
+  category: Array<Types.ObjectId>;
 }
 
 export type TFinanceOperationDifference = Pick<
@@ -71,7 +82,13 @@ type PreModel = Model<IFinanceOperation, object, IFinanceOperationMethods>;
 
 export type TUpdateOperationObject = Pick<
   IFinanceOperation,
-  'value' | 'count' | 'date' | 'name' | 'description' | 'operationType'
+  | 'value'
+  | 'count'
+  | 'date'
+  | 'name'
+  | 'description'
+  | 'operationType'
+  | 'includeInTotalSample'
 >;
 
 export interface ISetFinanceOperationStateProps {
@@ -136,10 +153,39 @@ export const schema: SchemaType = new Schema<
   IFinanceOperationStatics
 >(
   {
+    financeAccount: {
+      type: Schema.Types.ObjectId,
+      ref: DB_MODEL_NAMES.financeAccount,
+      required: true,
+    },
+    financeTarget: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref: DB_MODEL_NAMES.financeTarget,
+    },
+    fromTemplate: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      ref: DB_MODEL_NAMES.financeTemplate,
+    },
+    category: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: DB_MODEL_NAMES.financeCategory,
+        },
+      ],
+      default: [],
+    },
     model: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: 'Finance',
+      ref: DB_MODEL_NAMES.financeModel,
+    },
+    linkToEventId: {
+      type: Schema.Types.ObjectId,
+      ref: DB_MODEL_NAMES.eventModel,
+      required: true,
     },
     name: {
       type: String,
@@ -149,8 +195,12 @@ export const schema: SchemaType = new Schema<
     },
     date: {
       type: Date,
-      nullable: true,
-      default: null,
+      required: true,
+    },
+    includeInTotalSample: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     result: {
       type: Number,
@@ -186,7 +236,7 @@ export const schema: SchemaType = new Schema<
       type: [
         {
           type: Schema.Types.ObjectId,
-          ref: 'Event',
+          ref: DB_MODEL_NAMES.eventModel,
         },
       ],
       default: [],
@@ -382,6 +432,7 @@ export const schema: SchemaType = new Schema<
         operation.result = Math.abs(operation.count * operation.value);
         operation.description = data.description;
         operation.operationType = data.operationType;
+        operation.includeInTotalSample = !!data.includeInTotalSample;
 
         await operation.save(
           {
@@ -438,9 +489,20 @@ export const schema: SchemaType = new Schema<
       async createOperation(
         data: IInitialFinanceOperation
       ): Promise<IUpdateOperationValueResult> {
+        const model: HydratedDocument<IFinance> | null = await Finance.findOne({
+          _id: data.model,
+        });
+
+        if (!model) {
+          throw new ResponseException(
+            ResponseException.createObject(404, 'error', 'Модель не найдена!')
+          );
+        }
+
         const operation: HydratedDocument<IFinanceOperation> =
           await FinanceOperation.create({
             ...data,
+            linkToEventId: model.model,
             result: Math.abs(data.count) * Math.abs(data.value),
           });
 
